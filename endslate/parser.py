@@ -1,0 +1,317 @@
+"""Turn a messy release name into a best-effort guess.
+
+Pure functions, no network, no filesystem. The title this produces is a search
+key, not an answer: when a provider match exists its title wins.
+"""
+from __future__ import annotations
+
+import re
+from typing import Optional
+
+from endslate.langs import MULTI, NOISE_TOKENS as LANG_NOISE, normalize as norm_lang
+from endslate.models import ParsedName
+
+VIDEO_EXTS = {".mkv", ".mp4", ".avi", ".m4v", ".mov", ".wmv", ".mpg", ".mpeg", ".ts", ".m2ts", ".flv", ".webm"}
+SUBTITLE_EXTS = {".srt", ".ass", ".ssa", ".sub", ".idx", ".vtt", ".sup"}
+ARTWORK_NAMES = {"poster", "folder", "fanart", "banner", "logo", "backdrop", "thumb", "clearart", "disc", "cover"}
+ARTWORK_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".tbn"}
+
+RESOLUTIONS = {"2160p", "1080p", "720p", "480p", "576p", "1440p", "4k", "8k", "uhd", "fhd", "qhd", "hd", "sd"}
+
+SOURCES = {
+    "bluray", "blu", "brrip", "bdrip", "bdremux", "remux", "webrip", "webdl", "web", "hdrip",
+    "dvdrip", "dvdscr", "dvd", "hdtv", "pdtv", "predvd", "hdcam", "camrip", "cam", "telesync",
+    "amzn", "nf", "netflix", "itunes", "dsnp", "hmax", "atvp", "hulu", "pcok", "stan", "sky",
+    "max", "pmtp", "crav", "red", "vmax", "uhdtv", "hdts",
+}
+
+CODECS = {
+    "x264", "x265", "h264", "h265", "hevc", "avc", "av1", "xvid", "divx", "vp9", "mpeg2",
+    "10bit", "8bit", "12bit", "hi10p", "hi10", "10bits",
+}
+
+HDR = {"hdr", "hdr10", "hdr10plus", "dv", "dovi", "sdr", "hlg"}
+
+AUDIO = {
+    "aac", "ac3", "eac3", "dd", "ddp", "dts", "dtshd", "truehd", "atmos", "flac", "mp3", "opus",
+    "ma", "5", "6ch", "2ch", "8ch", "lpcm", "pcm", "aac5", "ddp5", "dd5", "aac2", "ddp2", "dd2",
+    "224kbps", "640kbps", "dtsx",
+}
+
+MISC = {
+    "repack", "proper", "internal", "limited", "esub", "esubs", "msub", "msubs", "subs", "sub",
+    "subbed", "dubbed", "dual", "org", "untouched", "ds4k", "hq", "web-dl",
+    "bollywood", "hollywood", "www", "torrent", "downloaded", "predvdrip", "nfrip",
+}
+
+EDITIONS = [
+    ("unrated dc", "Unrated Directors Cut"),
+    ("unrated directors cut", "Unrated Directors Cut"),
+    ("directors cut", "Directors Cut"),
+    ("director's cut", "Directors Cut"),
+    ("final cut", "Final Cut"),
+    ("extended", "Extended"),
+    ("unrated", "Unrated"),
+    ("uncut", "Uncut"),
+    ("remastered", "Remastered"),
+    ("theatrical", "Theatrical"),
+    ("special edition", "Special Edition"),
+    ("ultimate edition", "Ultimate Edition"),
+    ("imax", "IMAX"),
+    ("criterion", "Criterion"),
+    ("anniversary edition", "Anniversary Edition"),
+]
+
+# Tokens that are certainly noise regardless of position.
+NOISE = RESOLUTIONS | SOURCES | CODECS | HDR | AUDIO | MISC | LANG_NOISE | MULTI
+
+# Scene-group names collide with real words: GHOSTS, SILENCE and STRiFE are all
+# release groups and all plausible episode titles. They end a title only when
+# something technical has already appeared, so the episode-title pass ignores them.
+HARD_NOISE = RESOLUTIONS | SOURCES | CODECS | HDR | AUDIO | MULTI | LANG_NOISE | {
+    "repack", "proper", "esub", "esubs", "msub", "msubs", "web-dl", "www", "torrent",
+}
+
+# Release sites and scene groups appear as domains or as a trailing -GROUP.
+_SITE_RE = re.compile(
+    r"(?<![A-Za-z0-9])(?:www\.)?[A-Za-z0-9][A-Za-z0-9\-]*\.(?:com|net|org|mx|am|re|to|co|io|me|info|xyz|site|pro)(?![A-Za-z])",
+    re.I,
+)
+_KNOWN_GROUPS = {
+    "yts", "yify", "rarbg", "galaxyrg", "galaxyrg265", "psa", "stoic", "lumix", "darq", "hone",
+    "absinth", "silence", "strife", "mzabi", "ghosts", "swtyblz", "frds", "mnhd", "ralphy",
+    "xtrem3x", "taoe", "4khdhub", "hdhub", "hollymoviehd", "mkvcage", "10xflix", "ettv", "ext",
+    "extratorrent", "demonoid", "ahashare", "yifystatus", "ytsproxies", "anoxmous", "ctrlhd",
+    "sparks", "fgt", "evo", "tigole", "qxr", "megusta", "minx", "successfulcrab", "edith",
+    "playweb", "flux", "ntb", "kogi", "tepes", "cakes", "syncopy", "sartre", "ntg", "afg",
+}
+
+_SEP = r"[\s._\-\[\]()+,]"
+_BOUND = r"(?<![A-Za-z0-9])"
+_EBOUND = r"(?![A-Za-z0-9])"
+
+_EPISODE_PATTERNS = [
+    # S01E02, S01E02E03, S01E02-E03, s01.e02
+    re.compile(r"(?<![A-Za-z0-9])s(?P<s>\d{1,2})[\s._\-]*e(?P<e>\d{1,3})(?:[\s._\-]*(?:e|-)(?P<e2>\d{1,3}))?(?![0-9])", re.I),
+    # 1x02, 01x02
+    re.compile(r"(?<![A-Za-z0-9])(?P<s>\d{1,2})x(?P<e>\d{1,3})(?![0-9])", re.I),
+    # Season 1 Episode 2
+    re.compile(r"season[\s._\-]*(?P<s>\d{1,2})[\s._\-]*episode[\s._\-]*(?P<e>\d{1,3})(?![0-9])", re.I),
+]
+
+_SEASON_ONLY_PATTERNS = [
+    re.compile(r"(?<![A-Za-z0-9])s(?P<s>\d{1,2})(?![0-9eExX])", re.I),
+    re.compile(r"(?<![A-Za-z])season[\s._\-]*(?P<s>\d{1,2})(?![0-9])", re.I),
+]
+
+_EPISODE_ONLY_PATTERNS = [
+    re.compile(r"(?<![A-Za-z0-9])e(?:p|pisode)?[\s._\-]*(?P<e>\d{1,3})(?![0-9])", re.I),
+]
+
+_YEAR_BRACKETED = re.compile(r"[\[(](?P<y>19\d{2}|20\d{2})[\])]")
+_YEAR_BARE = re.compile(r"(?<![A-Za-z0-9])(?P<y>19\d{2}|20\d{2})(?![A-Za-z0-9])")
+_PART_RE = re.compile(r"(?<![A-Za-z0-9])(?:cd|disc|disk|part|pt)[\s._\-]*(?P<p>\d{1,2})(?![0-9])", re.I)
+_TRAILING_CUT_RE = re.compile(r"^(?P<base>.*\d)\s*(?P<letter>[A-D])$")
+_SAMPLE_RE = re.compile(r"(?<![A-Za-z0-9])sample(?![A-Za-z0-9])", re.I)
+
+MAX_SANE_YEAR = 2100
+
+
+def _token_noise_spans(text: str, *, hard_only: bool = False) -> list[tuple[int, int]]:
+    """Spans of text that are certainly release noise."""
+    vocabulary = HARD_NOISE if hard_only else NOISE
+    spans: list[tuple[int, int]] = []
+    for m in _SITE_RE.finditer(text):
+        spans.append(m.span())
+    for m in re.finditer(r"[A-Za-z0-9][A-Za-z0-9'+]*", text):
+        tok = m.group(0).lower()
+        if tok in vocabulary or (not hard_only and tok in _KNOWN_GROUPS):
+            spans.append(m.span())
+        elif re.fullmatch(r"\d+kbps|\d+mb|\d+gb", tok):
+            spans.append(m.span())
+    return sorted(spans)
+
+
+def _normalize_separators(text: str) -> str:
+    out = text.replace("_", " ")
+    # Dot-separated names only: leave "Mr. and Mrs. Smith" alone.
+    if out.count(".") > out.count(" "):
+        out = out.replace(".", " ")
+    out = re.sub(r"\s+", " ", out)
+    return out.strip()
+
+
+def _clean_title(text: str) -> str:
+    out = _normalize_separators(text)
+    out = out.strip(" -_.[](){}+,&")
+    out = re.sub(r"\s*-\s*$", "", out)
+    out = re.sub(r"\s+", " ", out)
+    # A lone trailing "(" or "[" left by a cut mid-bracket.
+    out = out.rstrip(" ([{-")
+    return out.strip()
+
+
+def _titlecase_if_shouted(text: str) -> str:
+    if len(text.split()) < 2:
+        return text
+    letters = [c for c in text if c.isalpha()]
+    if letters and all(c.isupper() for c in letters) and len(letters) > 3:
+        return " ".join(w.capitalize() if w.isupper() else w for w in text.split())
+    return text
+
+
+def detect_edition(text: str) -> str:
+    low = _normalize_separators(text).lower()
+    for needle, label in EDITIONS:
+        if re.search(_BOUND + re.escape(needle) + _EBOUND, low):
+            return label
+    return ""
+
+
+def detect_language(text: str) -> str:
+    """Language implied by a subtitle-style name such as 'x.en.srt' or 'dan'."""
+    normalized = _normalize_separators(text).lower()
+    whole = norm_lang(normalized)
+    if whole:
+        return whole
+    parts = re.split(r"[\s._\-]+", normalized)
+    for tok in reversed(parts):
+        if tok in ("forced", "sdh", "cc", "hi"):
+            continue
+        code = norm_lang(tok)
+        if code:
+            return code
+    return ""
+
+
+def parse_season_from_folder(name: str) -> Optional[int]:
+    for pat in _SEASON_ONLY_PATTERNS:
+        m = pat.search(name)
+        if m:
+            return int(m.group("s"))
+    return None
+
+
+def parse(name: str, *, is_dir: bool = False) -> ParsedName:
+    """Parse one file or folder name."""
+    raw = name if is_dir else re.sub(r"\.[A-Za-z0-9]{1,5}$", "", name)
+    out = ParsedName()
+    out.is_sample = bool(_SAMPLE_RE.search(raw))
+
+    cuts: list[int] = []
+
+    # 1. Episode marker wins over everything else.
+    ep_end = None
+    for pat in _EPISODE_PATTERNS:
+        m = pat.search(raw)
+        if m:
+            out.season = int(m.group("s"))
+            out.episode = int(m.group("e"))
+            if m.groupdict().get("e2"):
+                out.episode_end = int(m.group("e2"))
+            cuts.append(m.start())
+            ep_end = m.end()
+            break
+    if out.season is None:
+        m = None
+        for pat in _SEASON_ONLY_PATTERNS:
+            m = pat.search(raw)
+            if m:
+                out.season = int(m.group("s"))
+                cuts.append(m.start())
+                break
+        if out.season is not None and out.episode is None:
+            for pat in _EPISODE_ONLY_PATTERNS:
+                m2 = pat.search(raw, m.end() if m else 0)
+                if m2:
+                    out.episode = int(m2.group("e"))
+                    ep_end = m2.end()
+                    break
+
+    # 2. Year: a bracketed one is a deliberate statement, a bare one is a guess.
+    ym = _YEAR_BRACKETED.search(raw)
+    if ym:
+        out.year = int(ym.group("y"))
+        cuts.append(ym.start())
+    else:
+        for ym in _YEAR_BARE.finditer(raw):
+            value = int(ym.group("y"))
+            # A year cannot be the whole title unless nothing else is there.
+            if ym.start() == 0 and len(raw) > 6:
+                continue
+            out.year = value
+            cuts.append(ym.start())
+            break
+
+    # 3. Release noise.
+    noise = _token_noise_spans(raw)
+    if noise:
+        cuts.append(noise[0][0])
+
+    # 4. Title is whatever comes before the earliest marker.
+    cut = min(cuts) if cuts else len(raw)
+    title = _clean_title(raw[:cut])
+    if not title:
+        title = _clean_title(raw)
+    title = _titlecase_if_shouted(title)
+
+    # "Housefull 5A" is cut A of Housefull 5, not a film called Housefull 5A.
+    cm = _TRAILING_CUT_RE.match(title)
+    if cm and len(title) > 3:
+        out.part = cm.group("letter")
+        title = cm.group("base").strip()
+
+    out.title = title
+
+    # 5. Episode title: between the episode marker and the first noise after it.
+    if ep_end is not None:
+        tail_start = ep_end
+        tail_end = len(raw)
+        for start, end in _token_noise_spans(raw, hard_only=True):
+            if start >= tail_start:
+                tail_end = start
+                break
+        ytail = _YEAR_BARE.search(raw, tail_start)
+        if ytail and ytail.start() < tail_end:
+            tail_end = ytail.start()
+        candidate = _clean_title(raw[tail_start:tail_end])
+        candidate = re.sub(r"^(?:e\d{1,3}|-|–)\s*", "", candidate, flags=re.I).strip(" -")
+        if candidate:
+            out.episode_title = _titlecase_if_shouted(candidate)
+
+    # 6. Decorations.
+    out.edition = detect_edition(raw)
+    pm = _PART_RE.search(raw)
+    if pm and not out.part:
+        out.part = pm.group("p")
+    for token in RESOLUTIONS:
+        if re.search(_BOUND + re.escape(token) + _EBOUND, raw, re.I):
+            out.resolution = token if token != "4k" else "2160p"
+            break
+    for token in ("bluray", "remux", "webrip", "webdl", "web", "hdtv", "dvdrip", "hdrip", "brrip", "bdrip", "predvd", "cam"):
+        if re.search(_BOUND + re.escape(token) + _EBOUND, raw, re.I):
+            out.source = {"webdl": "WEB-DL", "web": "WEB", "bluray": "BluRay"}.get(token, token.upper())
+            break
+    out.language = detect_language(raw) if not is_dir else ""
+    return out
+
+
+def merge(file_parse: ParsedName, folder_parse: ParsedName) -> ParsedName:
+    """Combine a file's parse with its folder's, preferring whichever is richer."""
+    out = ParsedName(**vars(file_parse))
+    if not out.title or len(out.title) < 2:
+        out.title = folder_parse.title
+    if out.year is None:
+        out.year = folder_parse.year
+    if out.season is None:
+        out.season = folder_parse.season
+    if out.episode is None:
+        out.episode = folder_parse.episode
+    if not out.edition:
+        out.edition = folder_parse.edition
+    if not out.part:
+        out.part = folder_parse.part
+    # A folder title that carries a year is usually the more deliberate name.
+    if folder_parse.year is not None and folder_parse.title and len(folder_parse.title) >= len(out.title):
+        out.title = folder_parse.title
+    return out

@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "endslate"
+version = "1.0.0"
+description = "Rename and reorganize a movie and TV library into a media-server-clean layout"
+requires-python = ">=3.10"
+dependencies = ["requests>=2.31"]
+
+[project.optional-dependencies]
+gui = ["PySide6>=6.6"]
+dev = ["pytest>=7.4"]
+
+[project.scripts]
+endslate = "endslate.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["endslate*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
