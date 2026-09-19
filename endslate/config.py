@@ -47,6 +47,8 @@ class Config:
     folder_per_movie: Optional[bool] = None
     check_jellyfin: bool = True
     jellyfin_url: str = "http://localhost:8096"
+    jellyfin_api_key: str = ""
+    jellyfin_refresh_after_apply: bool = True
     fuzzy_threshold: float = 0.85
     custom_presets: list = field(default_factory=list)
     theme: str = "system"

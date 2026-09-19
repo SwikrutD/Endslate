@@ -60,6 +60,38 @@ class PlanJob(_Job):
             self.failed.emit(str(exc))
 
 
+class HealthJob(_Job):
+    done = Signal(object)
+
+    def __init__(self, scan_result: LibraryScan):
+        super().__init__()
+        self.scan_result = scan_result
+
+    def run(self) -> None:
+        try:
+            from endslate.health import inspect
+
+            self.done.emit(inspect(self.scan_result, progress=self._emit))
+        except Exception as exc:
+            self.failed.emit(str(exc))
+
+
+class ProbeJob(_Job):
+    done = Signal(object)
+
+    def __init__(self, paths):
+        super().__init__()
+        self.paths = list(paths)
+
+    def run(self) -> None:
+        try:
+            from endslate.health import probe
+
+            self.done.emit(probe(self.paths))
+        except Exception as exc:
+            self.failed.emit(str(exc))
+
+
 class ApplyJob(_Job):
     done = Signal(object)
 

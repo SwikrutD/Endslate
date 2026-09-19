@@ -27,7 +27,7 @@ def label(text: str, role: str = "body", parent: Optional[QWidget] = None, wrap:
     out = QLabel(text.upper() if role == "section" else text, parent)
     out.setProperty("role", role)
     theme.apply_role_font(out, role)
-    out.setWordWrap(wrap if wrap is not None else role in ("subtitle", "muted", "body"))
+    out.setWordWrap(wrap if wrap is not None else role in ("subtitle", "muted", "body", "caption"))
     if out.wordWrap():
         out.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
     return out
@@ -104,6 +104,41 @@ class ClickableCard(QFrame):
         self._hover = False
         self.restyle()
         super().leaveEvent(event)
+
+
+class ElidedLabel(QLabel):
+    """A label that trims itself instead of forcing the window wider.
+
+    A long path in a non-wrapping label sets a minimum width, and a minimum width
+    inside a page column pushes the whole layout past the window edge.
+    """
+
+    def __init__(self, text: str = "", role: str = "caption", mode=Qt.ElideMiddle, parent=None):
+        super().__init__(parent)
+        self.setProperty("role", role)
+        theme.apply_role_font(self, role)
+        self.setMinimumWidth(0)
+        self.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
+        self._mode = mode
+        self._full = ""
+        self.setText(text)
+
+    def setText(self, text: str) -> None:  # noqa: N802
+        self._full = text or ""
+        self._apply()
+
+    def fullText(self) -> str:  # noqa: N802
+        return self._full
+
+    def _apply(self) -> None:
+        metrics = self.fontMetrics()
+        width = max(60, self.width() - 2)
+        super().setText(metrics.elidedText(self._full, self._mode, width))
+        self.setToolTip(self._full)
+
+    def resizeEvent(self, event):  # noqa: N802
+        super().resizeEvent(event)
+        self._apply()
 
 
 class Card(QFrame):

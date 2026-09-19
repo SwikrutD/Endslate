@@ -180,6 +180,11 @@ def _collect_items(scan: LibraryScan, junk_dirs: list[Path]) -> list[Item]:
     return items
 
 
+def collect_items(scan: LibraryScan) -> list[Item]:
+    """Every video in the library, parsed. Used by the health pass as well."""
+    return _collect_items(scan, _whole_junk_dirs(scan))
+
+
 def _offline_confidence(item: Item) -> Confidence:
     if not item.parsed.title:
         return Confidence.NONE

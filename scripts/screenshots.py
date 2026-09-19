@@ -46,6 +46,14 @@ def main() -> int:
     window.show()
     app.processEvents()
 
+    demo = os.environ.get("ENDSLATE_SHOT_HEALTH")
+    if demo:
+        from endslate.health import inspect
+        from endslate.scanner import scan as scan_lib
+
+        window.health_page.set_report(inspect(scan_lib(Path(demo))))
+        app.processEvents()
+
     plan = None
     if root and root.is_dir():
         scanned = scan(root)
@@ -66,7 +74,7 @@ def main() -> int:
     for mode in ("dark", "light"):
         window.set_theme(mode)
         app.processEvents()
-        for page in ("library", "review", "apply", "history", "settings"):
+        for page in ("library", "review", "apply", "health", "history", "settings"):
             window.go_to(page)
             app.processEvents()
             app.processEvents()

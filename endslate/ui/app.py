@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
 from endslate import __version__, jellyfin, presets as presets_mod
 from endslate.cache import Cache
 from endslate.config import Config, app_dir, cache_path, load_config
+from endslate.decisions import Decisions
 from endslate.journal import list_runs, mark_reverted
 from endslate.models import Plan
 from endslate.planner import Options
@@ -32,6 +33,7 @@ from endslate.presets import BUILTIN_PRESETS, Preset, build_tokens, render
 from endslate.ui import icons, theme
 from endslate.ui.dialogs import ResolveDialog
 from endslate.ui.pages.apply import ApplyPage
+from endslate.ui.pages.health import HealthPage
 from endslate.ui.pages.history import HistoryPage
 from endslate.ui.pages.library import LibraryPage
 from endslate.ui.pages.review import ReviewPage
@@ -39,12 +41,13 @@ from endslate.ui.pages.settings import SettingsPage
 from endslate.ui.resolver import Resolver
 from endslate.ui.theme import RAIL_WIDTH, SPACE
 from endslate.ui.widgets import Toast, label, restyle_tree
-from endslate.ui.workers import ApplyJob, PlanJob, ScanJob, UndoJob
+from endslate.ui.workers import ApplyJob, HealthJob, PlanJob, ProbeJob, ScanJob, UndoJob
 
 NAV = [
     ("Library", "library"),
     ("Review", "review"),
     ("Apply", "apply"),
+    ("Health", "health"),
     ("History", "history"),
     ("Settings", "settings"),
 ]
@@ -142,8 +145,7 @@ class MainWindow(QMainWindow):
         self.config: Config = load_config()
         self.scan_result = None
         self.plan: Optional[Plan] = None
-        self.overrides: dict[str, dict] = {}
-        self.show_overrides: dict[str, dict] = {}
+        self.decisions = Decisions()
         self.job = None
         self._undo_info = None
 
@@ -173,12 +175,14 @@ class MainWindow(QMainWindow):
         self.library_page = LibraryPage(self)
         self.review_page = ReviewPage(self)
         self.apply_page = ApplyPage(self)
+        self.health_page = HealthPage(self)
         self.history_page = HistoryPage(self)
         self.settings_page = SettingsPage(self)
         self.page_map = {
             "library": self.library_page,
             "review": self.review_page,
             "apply": self.apply_page,
+            "health": self.health_page,
             "history": self.history_page,
             "settings": self.settings_page,
         }
@@ -250,10 +254,13 @@ class MainWindow(QMainWindow):
         self.settings_page.fuzzy.setValue(self.config.fuzzy_threshold)
         self.settings_page.check_jellyfin.setChecked(self.config.check_jellyfin)
         self.settings_page.jellyfin_url.setText(self.config.jellyfin_url)
+        self.settings_page.jellyfin_key.setText(self.config.jellyfin_api_key)
+        self.settings_page.refresh_after_apply.setChecked(self.config.jellyfin_refresh_after_apply)
         self.settings_page.theme_choice.select(self.config.theme)
         self.settings_page.set_templates(preset)
         self.rail.set_foot(self.config.last_root or "No folder chosen yet")
         self.refresh_cache_label()
+        self.refresh_decision_count()
         self.preview_templates()
         restyle_tree(self)
 
@@ -264,6 +271,8 @@ class MainWindow(QMainWindow):
         self.config.fuzzy_threshold = self.settings_page.fuzzy.value()
         self.config.check_jellyfin = self.settings_page.check_jellyfin.isChecked()
         self.config.jellyfin_url = self.settings_page.jellyfin_url.text().strip() or "http://localhost:8096"
+        self.config.jellyfin_api_key = self.settings_page.jellyfin_key.text().strip()
+        self.config.jellyfin_refresh_after_apply = self.settings_page.refresh_after_apply.isChecked()
         self._save_library_choices()
         self.config.save()
         self.toast("Settings saved")
@@ -365,7 +374,8 @@ class MainWindow(QMainWindow):
             return
         self._busy(True, "planning")
         self._last_matcher = self.tmdb()
-        resolver = Resolver(self._last_matcher, self.overrides, self.show_overrides)
+        resolver = Resolver(self._last_matcher, self.decisions)
+        self._last_resolver = resolver
         self.job = PlanJob(self.scan_result, self.current_preset(), self._options(), matcher=resolver)
         self.job.progress.connect(self._on_progress)
         self.job.failed.connect(self._on_failure)
@@ -381,6 +391,12 @@ class MainWindow(QMainWindow):
             if key in previous:
                 entry.selected = previous[key]
         matcher = getattr(self, "_last_matcher", None)
+        remembered = getattr(self, "_last_resolver", None)
+        if remembered is not None and remembered.applied:
+            plan.notes.append(
+                f"{remembered.applied} item"
+                f"{'s' if remembered.applied != 1 else ''} used a title you set earlier."
+            )
         if matcher is not None and getattr(matcher, "unreachable", False):
             plan.provider_note = (
                 f"TMDB could not be reached ({matcher.offline_reason}). Titles and years came "
@@ -442,11 +458,11 @@ class MainWindow(QMainWindow):
         dialog = ResolveDialog(entry.item, matcher=self.tmdb(), parent=self)
         if dialog.exec() != ResolveDialog.Accepted or dialog.result_meta is None:
             return
-        if dialog.apply_to_show:
-            self.show_overrides[entry.item.show_hint] = dialog.result_meta
-        else:
-            self.overrides[str(entry.item.video.path)] = dialog.result_meta
-        self.toast(f"Set to {dialog.result_meta['title']}", "sparkle")
+        self.decisions.remember(entry.item, dialog.result_meta)
+        self.decisions.save()
+        self.refresh_decision_count()
+        scope = "this show" if entry.item.is_tv else "this title"
+        self.toast(f"{dialog.result_meta['title']} remembered for {scope}", "sparkle")
         self.start_plan()
 
     # ----------------------------------------------------------------- apply
@@ -502,6 +518,8 @@ class MainWindow(QMainWindow):
     def _apply_done(self, result) -> None:
         self._busy(False, "")
         self.apply_page.show_result(result)
+        if self.config.jellyfin_refresh_after_apply and self.config.jellyfin_api_key and result.moved:
+            self.jellyfin_refresh(quiet=True)
         self.scan_result = None
         self.plan = None
         self.review_page.set_plan_cleared()
@@ -509,6 +527,109 @@ class MainWindow(QMainWindow):
             self.toast(f"{len(result.failures)} files did not move", "warning", "red")
         else:
             self.toast(f"Renamed {result.moved:,} files", "check")
+
+    # ---------------------------------------------------------------- health
+
+    def start_health(self) -> None:
+        if self.scan_result is None:
+            self.go_to("library")
+            self.toast("Scan a library first", "info", "amber")
+            return
+        self._busy(True, "checking the library")
+        self.job = HealthJob(self.scan_result)
+        self.job.progress.connect(self._on_progress)
+        self.job.failed.connect(self._on_failure)
+        self.job.done.connect(self._health_done)
+        self.job.start()
+
+    def _health_done(self, report) -> None:
+        self._busy(False, "")
+        self.health_page.set_report(report)
+        self.go_to("health")
+        counts = report.counts()
+        if counts.get("problem"):
+            self.toast(f"{counts['problem']} problem(s) found", "warning", "red")
+        elif report.findings:
+            self.toast(f"{len(report.findings)} things worth a look", "info", "amber")
+        else:
+            self.toast("Nothing wrong found", "check")
+
+    def check_playability(self) -> None:
+        paths = self.health_page.suspect_paths()
+        if not paths:
+            self.toast("Run the check first, then this probes whatever looks broken", "info", "amber")
+            return
+        self._busy(True, "probing files")
+        self.job = ProbeJob(paths)
+        self.job.progress.connect(self._on_progress)
+        self.job.failed.connect(self._on_failure)
+        self.job.done.connect(self._probe_done)
+        self.job.start()
+
+    def _probe_done(self, findings) -> None:
+        self._busy(False, "")
+        if self.health_page.report is None:
+            return
+        if not findings:
+            self.toast("Every suspect file opened fine", "check")
+            return
+        self.health_page.report.findings.extend(findings)
+        from endslate.health import SEVERITY_ORDER
+
+        self.health_page.report.findings.sort(
+            key=lambda f: (SEVERITY_ORDER.get(f.severity, 9), -f.bytes_involved, f.title)
+        )
+        self.health_page.set_report(self.health_page.report)
+        self.toast(f"{len(findings)} file(s) would not open", "warning", "red")
+
+    # -------------------------------------------------------------- jellyfin
+
+    def _jellyfin_client(self):
+        from endslate.jellyfin import JellyfinClient
+
+        return JellyfinClient(
+            self.settings_page.jellyfin_url.text().strip() or self.config.jellyfin_url,
+            self.settings_page.jellyfin_key.text().strip() or self.config.jellyfin_api_key,
+        )
+
+    def test_jellyfin(self) -> None:
+        from endslate.jellyfin import JellyfinError
+
+        try:
+            name = self._jellyfin_client().server_name()
+        except JellyfinError as exc:
+            QMessageBox.warning(self, "Jellyfin", str(exc))
+            return
+        self.toast(f"Connected to {name}", "check")
+
+    def jellyfin_refresh(self, quiet: bool = False) -> bool:
+        from endslate.jellyfin import JellyfinError
+
+        try:
+            self._jellyfin_client().refresh()
+        except JellyfinError as exc:
+            if not quiet:
+                self.apply_page.show_jellyfin(str(exc), "red", "warning")
+                self.toast("Jellyfin did not accept the rescan", "warning", "red")
+            return False
+        message = "Jellyfin is rescanning. Ask what it recognises once it settles."
+        self.apply_page.show_jellyfin(message, "blue", "refresh")
+        if not quiet:
+            self.toast("Jellyfin is rescanning", "refresh")
+        return True
+
+    def jellyfin_report(self) -> None:
+        report = self._jellyfin_client().report()
+        if not report.ok:
+            self.apply_page.show_jellyfin(report.summary(), "red", "warning")
+            return
+        detail = "\n".join(
+            f"{row['type'] or 'item':7} {row['name']}\n        {row['path']}"
+            for row in report.unidentified[:200]
+        )
+        tone, glyph = ("green", "check") if not report.unidentified else ("amber", "warning")
+        self.apply_page.show_jellyfin(report.summary(), tone, glyph, detail)
+        self.toast(report.summary(), glyph, tone)
 
     # --------------------------------------------------------------- history
 
@@ -575,6 +696,32 @@ class MainWindow(QMainWindow):
                 "TMDB",
                 f"No results came back. {matcher.offline_reason or 'Check the key and the network.'}",
             )
+
+    def forget_decisions(self) -> None:
+        if not len(self.decisions):
+            self.toast("Nothing has been remembered yet", "info", "amber")
+            return
+        answer = QMessageBox.question(
+            self,
+            "Forget",
+            f"Forget {len(self.decisions)} remembered titles?\n\n"
+            "Anything you resolved by hand goes back to Needs you on the next scan.",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        if answer != QMessageBox.Yes:
+            return
+        count = self.decisions.forget_all()
+        self.refresh_decision_count()
+        self.toast(f"Forgot {count} decisions", "trash")
+
+    def refresh_decision_count(self) -> None:
+        count = len(self.decisions)
+        self.settings_page.decisions_label.setText(
+            f"{count} title{'s' if count != 1 else ''} remembered in {self.decisions.path}"
+            if count
+            else f"Nothing remembered yet. Resolutions are saved to {self.decisions.path}"
+        )
 
     def clear_cache(self) -> None:
         Cache(cache_path()).clear()

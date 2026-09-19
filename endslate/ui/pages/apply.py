@@ -149,6 +149,35 @@ class ApplyPage(Page):
         self.result.setVisible(False)
         self.add(self.result)
 
+        self.jellyfin_card = Card(padding=SPACE["lg"])
+        self.jellyfin_card.add(label("Does Jellyfin agree?", "section"))
+        self.jellyfin_card.add(
+            label(
+                "Renaming is the means. Whether Jellyfin recognises every film and show is the "
+                "result, and only Jellyfin can answer that.",
+                "muted",
+            )
+        )
+        jf_actions = QHBoxLayout()
+        jf_actions.setSpacing(SPACE["sm"])
+        self.refresh_button = button("Tell Jellyfin to rescan", "default", "refresh", window.jellyfin_refresh)
+        self.report_button = button("Ask what it recognises", "default", "review", window.jellyfin_report)
+        jf_actions.addWidget(self.refresh_button)
+        jf_actions.addWidget(self.report_button)
+        jf_actions.addStretch(1)
+        self.jellyfin_card.add_layout(jf_actions)
+        self.jellyfin_result = Banner("blue", "info", "")
+        self.jellyfin_result.setVisible(False)
+        self.jellyfin_card.add(self.jellyfin_result)
+        self.unidentified = QPlainTextEdit()
+        self.unidentified.setReadOnly(True)
+        self.unidentified.setProperty("role", "code")
+        self.unidentified.setFixedHeight(150)
+        self.unidentified.setVisible(False)
+        self.jellyfin_card.add(self.unidentified)
+        self.jellyfin_card.setVisible(False)
+        self.add(self.jellyfin_card)
+
         self.log_card = Card(padding=SPACE["lg"])
         self.log_card.add(label("Run log", "section"))
         self.log = QPlainTextEdit()
@@ -212,9 +241,17 @@ class ApplyPage(Page):
         else:
             self.progress.setRange(0, 0)
 
+    def show_jellyfin(self, text: str, tone: str = "blue", icon_name: str = "info",
+                      detail: str = "") -> None:
+        self.jellyfin_card.setVisible(True)
+        self.jellyfin_result.show_message(text, tone, icon_name)
+        self.unidentified.setPlainText(detail)
+        self.unidentified.setVisible(bool(detail))
+
     def show_result(self, result) -> None:
         self.set_busy(False)
         self.log_card.setVisible(True)
+        self.jellyfin_card.setVisible(True)
         lines = []
         if result.failures:
             lines.append(f"{len(result.failures)} FILES DID NOT MOVE")

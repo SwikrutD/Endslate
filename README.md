@@ -84,6 +84,48 @@ listening on the Jellyfin port and warns you, but the check is a courtesy, not a
 
 Right-click any row to open its folder in Explorer, copy either path, or exclude it.
 
+## It remembers what you tell it
+
+Resolving a title by hand used to last until you closed the window. Now every
+resolution is written to `%LOCALAPPDATA%\Endslate\decisions.json`, twice: against the
+file you made it on, and against the title you made it for. The second one is what
+matters. It survives the file being renamed and it generalises, so
+`INDIANA JONES RAIDERS LOST ARK` stays solved no matter what the file is called
+afterwards, and a decision about a show covers every episode of it.
+
+Needs you should therefore shrink to zero over a few sessions and stay there. Settings
+shows how many titles are remembered and has a button to forget them all.
+
+## Does Jellyfin agree?
+
+Renaming is the means. Whether Jellyfin recognises everything is the result, and only
+Jellyfin can answer that. Put a Jellyfin API key in Settings (Dashboard, API Keys) and
+Endslate can:
+
+- tell Jellyfin to rescan when a run finishes, automatically or on the button
+- ask which movies and shows it still has no provider id for, and list them
+
+That list is the honest score for a run. If something renamed cleanly and Jellyfin still
+cannot place it, the name is not the problem.
+
+## Health
+
+A correctly named library can still be missing the middle of a season. The Health screen
+looks for what renaming cannot fix:
+
+| Check | What it finds |
+| --- | --- |
+| Missing episodes | Gaps between the first and last episode of any season |
+| Redundant archives | A large `.zip` or `.rar` sitting beside its own extracted contents |
+| Duplicate copies | The same film twice, ranked by resolution then size, with the waste totalled |
+| Broken files | Zero-byte videos, and anything too small to be a film or an episode |
+| Orphan subtitles | Subtitle files that match no video |
+| Empty folders | Left behind by something other than Endslate |
+
+Nothing on this screen is renamed, quarantined or deleted. Each finding gives you the
+path and a button to open its folder. **Check playability** runs `ffprobe` over whatever
+looked broken, so you learn which files will actually not play.
+
 ## Duplicates
 
 When two files resolve to the same name, neither moves and both wait on the Duplicates
@@ -186,6 +228,8 @@ against the real library without risk.
 | `ui/widgets.py` | Cards, tiles, pills, toggles, banners, empty states, toasts |
 | `ui/delegate.py` | How one proposed change is drawn in the review list |
 | `ui/pages/` | One module per screen |
+| `decisions.py` | What you resolved by hand, kept between runs |
+| `health.py` | The checks a renamer cannot make |
 
 ## Tests
 
@@ -196,6 +240,19 @@ python -m pytest
 
 `tests/fixtures/names.py` is the parser's specification: real filenames with the parse each
 must produce. Add a row whenever a name surprises you. `tests/test_regressions.py` holds one
-test per bug found by running against the real library. The executor is tested against a
+test per bug found by running against the real library.
+
+Matching is the part with the most riding on it, and until you record real answers it is
+only tested against a stub written from assumptions, which is exactly how two films called
+The Witch got through. Once, on a machine that can reach TMDB:
+
+```powershell
+python scripts/record_tmdb.py
+```
+
+That saves real search results and season listings to `tests/fixtures/tmdb/responses.json`
+and `tests/test_tmdb_live_fixtures.py` replays them offline from then on. Only response
+bodies are stored, never the key, and the recorder refuses to write if it finds the key in
+the payload anyway. Those tests skip themselves until the file exists. The executor is tested against a
 generated tree that reproduces every folder shape found in a real library, and the
 apply-then-undo round trip asserts the tree comes back byte-identical.

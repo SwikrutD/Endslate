@@ -20,7 +20,7 @@ from endslate.presets import Preset, build_tokens, render
 from endslate.ui import theme
 from endslate.ui.pages.base import Page
 from endslate.ui.theme import RADIUS_SM, SPACE
-from endslate.ui.widgets import Card, Divider, PageHeader, button, label
+from endslate.ui.widgets import Card, Divider, ElidedLabel, PageHeader, button, label
 
 THEME_CHOICES = [("system", "System", "monitor"), ("dark", "Dark", "moon"), ("light", "Light", "sun")]
 
@@ -118,10 +118,24 @@ class SettingsPage(Page):
         metadata.add(Divider())
 
         cache_row = QHBoxLayout()
-        self.cache_label = label("", "caption")
+        self.cache_label = ElidedLabel("", "caption")
         cache_row.addWidget(self.cache_label, 1)
         cache_row.addWidget(button("Empty the cache", "ghost", "trash", window.clear_cache))
         metadata.add_layout(cache_row)
+        metadata.add(Divider())
+
+        decisions_row = QHBoxLayout()
+        self.decisions_label = ElidedLabel("", "caption")
+        decisions_row.addWidget(self.decisions_label, 1)
+        decisions_row.addWidget(button("Forget them", "ghost", "undo", window.forget_decisions))
+        metadata.add_layout(decisions_row)
+        metadata.add(
+            label(
+                "Every title you resolve by hand is remembered, against that file and against "
+                "its name, so it never returns to Needs you.",
+                "caption",
+            )
+        )
         self.add(metadata)
 
         # -------------------------------------------------------- appearance
@@ -150,6 +164,32 @@ class SettingsPage(Page):
         self.jellyfin_url.setMaximumWidth(320)
         url_form.addRow(label("Jellyfin address", "body"), self.jellyfin_url)
         server.add_layout(url_form)
+        server.add(Divider())
+
+        server.add(label("API key", "body"))
+        jf_row = QHBoxLayout()
+        jf_row.setSpacing(SPACE["sm"])
+        self.jellyfin_key = QLineEdit()
+        self.jellyfin_key.setEchoMode(QLineEdit.Password)
+        self.jellyfin_key.setPlaceholderText("Jellyfin API key, from Dashboard, API Keys")
+        jf_row.addWidget(self.jellyfin_key, 1)
+        self.jellyfin_reveal = button("Show", "ghost")
+        self.jellyfin_reveal.setCheckable(True)
+        self.jellyfin_reveal.toggled.connect(
+            lambda on: self.jellyfin_key.setEchoMode(QLineEdit.Normal if on else QLineEdit.Password)
+        )
+        jf_row.addWidget(self.jellyfin_reveal)
+        jf_row.addWidget(button("Test the connection", "default", "key", window.test_jellyfin))
+        server.add_layout(jf_row)
+        server.add(
+            label(
+                "With a key Endslate can tell Jellyfin to rescan when a run finishes, and then ask "
+                "which films and shows it still could not identify.",
+                "caption",
+            )
+        )
+        self.refresh_after_apply = QCheckBox("Tell Jellyfin to rescan after every run")
+        server.add(self.refresh_after_apply)
         self.add(server)
 
         # ----------------------------------------------------------- advanced
