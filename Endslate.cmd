@@ -12,11 +12,25 @@ set "GUIPY="
 call :find_python
 call :find_pythonw
 
-if not defined CONPY goto :no_python
+if not exist "endslate\__init__.py" goto :wrong_folder
+if not defined CONPY goto :wrong_folder
+echo.
+echo   This launcher has to sit in the Endslate folder, next to the
+echo   "endslate" folder that holds the code.
+echo.
+echo   Current folder: %CD%
+echo.
+pause
+exit /b 1
+
+:no_python
 if not defined GUIPY set "GUIPY=%CONPY%"
 
 "%CONPY%" -c "import PySide6, requests" >nul 2>&1
-if errorlevel 1 call :install || exit /b 1
+if errorlevel 1 (
+    call :install
+    if errorlevel 1 exit /b 1
+)
 
 start "" "%GUIPY%" -m endslate gui
 exit /b 0
@@ -57,6 +71,16 @@ if errorlevel 1 (
 )
 echo   Done. Opening Endslate.
 exit /b 0
+
+:wrong_folder
+echo.
+echo   This launcher has to sit in the Endslate folder, next to the
+echo   "endslate" folder that holds the code.
+echo.
+echo   Current folder: %CD%
+echo.
+pause
+exit /b 1
 
 :no_python
 echo.
