@@ -134,6 +134,7 @@ class TmdbMatcher:
                     year=int(release) if release.isdigit() else None,
                     tmdb_id=row.get("id", 0),
                     overview=(row.get("overview") or "")[:200],
+                    poster_path=row.get("poster_path") or "",
                 )
             )
         return out
@@ -158,6 +159,7 @@ class TmdbMatcher:
                     year=int(first) if first.isdigit() else None,
                     tmdb_id=row.get("id", 0),
                     overview=(row.get("overview") or "")[:200],
+                    poster_path=row.get("poster_path") or "",
                 )
             )
         return out

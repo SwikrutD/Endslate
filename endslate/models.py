@@ -95,6 +95,7 @@ class Candidate:
     tmdb_id: int
     overview: str = ""
     score: float = 0.0
+    poster_path: str = ""
 
     @property
     def label(self) -> str:

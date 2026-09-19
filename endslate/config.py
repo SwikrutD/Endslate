@@ -49,6 +49,9 @@ class Config:
     jellyfin_url: str = "http://localhost:8096"
     fuzzy_threshold: float = 0.85
     custom_presets: list = field(default_factory=list)
+    theme: str = "system"
+    window_geometry: str = ""
+    window_state: str = ""
 
     def save(self) -> None:
         config_path().write_text(json.dumps(asdict(self), indent=2), encoding="utf-8")

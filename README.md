@@ -57,18 +57,33 @@ from the Desktop icon there is no console to print to, so any error is written t
 ## First run
 
 1. **Settings**: paste your TMDB API key (the v3 key from your TMDB account settings) and
-   press Test. Without a key the tool still works, but anything with no year in its
+   press Test. Without a key Endslate still works, but anything with no year in its
    filename lands in Needs you instead of resolving itself
-2. **Library**: point it at the folder that holds `Movies` and `TV Shows`, pick a preset,
-   press Scan
-3. **Review**: six tabs. Planned is what will happen, Needs you is what needs a decision.
-   Double-click any Needs you row to search TMDB or type the title in by hand
-4. **Apply**: confirms the counts, then moves the files
+2. **Library**: drop the folder that holds `Movies` and `TV Shows` onto the page, or
+   browse to it. Pick a preset. Press Scan library
+3. **Review**: six tiles across the top are both the counts and the filter. Planned is
+   what will happen, Needs you is what needs a decision. Double-click any row to search
+   TMDB, with posters, or type the title in by hand
+4. **Apply**: the numbers, the safety contract, then the run
 5. **History**: every run, with an Undo button
 
 Stop Jellyfin before applying. Moving files while its library scan is running can leave
 its database pointing at paths that no longer exist. Endslate checks whether anything is
 listening on the Jellyfin port and warns you, but the check is a courtesy, not a guarantee.
+
+## Getting around
+
+| Key | Does |
+| --- | --- |
+| `Ctrl` `1` to `5` | Jump to Library, Review, Apply, History, Settings |
+| `Ctrl` `R` or `F5` | Scan the library again |
+| `Ctrl` `F` | Jump to the search field |
+| `Space` | Include or exclude the selected rows |
+| `Enter` | Resolve the selected title |
+| `Ctrl` `A` | Tick everything the filter is showing |
+
+Right-click any row to open its folder in Explorer, copy either path, or exclude it.
+The theme follows Windows by default and can be pinned to dark or light in Settings.
 
 ## Presets
 
@@ -155,7 +170,11 @@ against the real library without risk.
 | `journal.py` | Append-only JSONL record of every operation |
 | `sanitize.py` | Make any title legal on Windows without mangling it |
 | `fsops.py` | Filesystem calls that cope with long paths and case-only renames |
-| `ui/` | PySide6 window. Thin, all logic lives below it |
+| `ui/theme.py` | The design system: colour, type and spacing tokens, and the stylesheet |
+| `ui/icons.py` | A stroke icon set drawn as SVG and tinted to the theme |
+| `ui/widgets.py` | Cards, tiles, pills, toggles, banners, empty states, toasts |
+| `ui/delegate.py` | How one proposed change is drawn in the review list |
+| `ui/pages/` | One module per screen |
 
 ## Tests
 

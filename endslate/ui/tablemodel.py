@@ -1,26 +1,31 @@
-"""The review table: current path on the left, proposed path on the right."""
+"""The review table's model: one row per reviewable change, one compound column.
+
+A rename is a before and an after, so a row is drawn as two lines rather than
+spread across columns. Sorting and searching are handled by the proxy below.
+"""
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Optional
 
-from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt
-from PySide6.QtGui import QColor
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, QSortFilterProxyModel, Qt
 
 from endslate.models import Bucket, OpKind, PlanEntry
 
-COLUMNS = ["", "Now", "After", "Why"]
+ENTRY_ROLE = Qt.UserRole + 1
+SORT_ROLE = Qt.UserRole + 2
+SEARCH_ROLE = Qt.UserRole + 3
 
-_AMBER = QColor("#8a6d1f")
-_GREY = QColor("#7a7a7a")
+SORT_KEYS = ["Name", "Size", "Folder", "Order found"]
 
 
 class PlanTableModel(QAbstractTableModel):
-    def __init__(self, root: Path, entries: Optional[list[PlanEntry]] = None, selectable: bool = True):
+    def __init__(self, root: Path = Path("."), selectable: bool = True):
         super().__init__()
         self.root = root
-        self.entries: list[PlanEntry] = entries or []
+        self.entries: list[PlanEntry] = []
         self.selectable = selectable
+        self.sort_key = "Order found"
 
     # ---------------------------------------------------------------- plumbing
 
@@ -33,21 +38,14 @@ class PlanTableModel(QAbstractTableModel):
         return 0 if parent.isValid() else len(self.entries)
 
     def columnCount(self, parent=QModelIndex()) -> int:
-        return len(COLUMNS)
-
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
-        if role == Qt.DisplayRole and orientation == Qt.Horizontal:
-            return COLUMNS[section]
-        return None
+        return 1
 
     def entry_at(self, row: int) -> Optional[PlanEntry]:
         if 0 <= row < len(self.entries):
             return self.entries[row]
         return None
 
-    # ------------------------------------------------------------------- data
-
-    def _relative(self, path) -> str:
+    def relative(self, path) -> str:
         if path is None:
             return ""
         try:
@@ -55,44 +53,52 @@ class PlanTableModel(QAbstractTableModel):
         except ValueError:
             return str(path)
 
-    def _extra_count(self, entry: PlanEntry) -> int:
-        if entry.item is None:
-            return 0
-        return sum(1 for op in entry.ops if op.kind is OpKind.MOVE and op.src != entry.item.video.path)
+    # ------------------------------------------------------------------- data
+
+    def _size_of(self, entry: PlanEntry) -> int:
+        if entry.item is not None:
+            return entry.item.video.size
+        return sum(op.size for op in entry.ops)
+
+    def _search_text(self, entry: PlanEntry) -> str:
+        parts = [self.relative(entry.source_path), self.relative(entry.target_path), entry.reason]
+        if entry.item is not None:
+            parts.append(entry.item.title)
+        return " ".join(p for p in parts if p).lower()
 
     def data(self, index, role=Qt.DisplayRole):
         if not index.isValid():
             return None
         entry = self.entries[index.row()]
-        column = index.column()
 
-        if role == Qt.CheckStateRole and column == 0 and self.selectable:
+        if role == ENTRY_ROLE:
+            return entry
+        if role == SEARCH_ROLE:
+            return self._search_text(entry)
+        if role == SORT_ROLE:
+            if self.sort_key == "Size":
+                return -self._size_of(entry)
+            if self.sort_key == "Folder":
+                return self.relative(entry.source_path).lower()
+            if self.sort_key == "Name":
+                target = entry.target_path or entry.source_path
+                return Path(str(target)).name.lower() if target else ""
+            return index.row()
+        if role == Qt.CheckStateRole and self.selectable:
             return Qt.Checked if entry.selected else Qt.Unchecked
-
         if role == Qt.DisplayRole:
-            if column == 1:
-                return self._relative(entry.source_path)
-            if column == 2:
-                target = self._relative(entry.target_path)
-                extra = self._extra_count(entry)
-                if extra:
-                    target += f"   (+{extra} subtitle{'s' if extra > 1 else ''})"
-                return target
-            if column == 3:
-                return entry.reason
-
+            return self.relative(entry.target_path) or self.relative(entry.source_path)
         if role == Qt.ToolTipRole:
-            lines = [f"{self._relative(op.src) or '-'}  ->  {self._relative(op.dst) or '-'}" for op in entry.ops]
+            lines = []
+            for op in entry.ops:
+                source = self.relative(op.src) or "-"
+                target = self.relative(op.dst) or "-"
+                lines.append(f"{op.kind.value}: {source}  →  {target}")
             return "\n".join(lines) or entry.reason
-
-        if role == Qt.ForegroundRole and entry.bucket in (Bucket.NOOP, Bucket.SKIPPED):
-            return _GREY
-        if role == Qt.ForegroundRole and entry.reason and entry.bucket is Bucket.PLANNED:
-            return _AMBER
         return None
 
     def setData(self, index, value, role=Qt.EditRole) -> bool:
-        if role == Qt.CheckStateRole and index.column() == 0 and self.selectable:
+        if role == Qt.CheckStateRole and self.selectable:
             self.entries[index.row()].selected = Qt.CheckState(value) == Qt.Checked
             self.dataChanged.emit(index, index, [Qt.CheckStateRole])
             return True
@@ -100,15 +106,52 @@ class PlanTableModel(QAbstractTableModel):
 
     def flags(self, index):
         base = Qt.ItemIsEnabled | Qt.ItemIsSelectable
-        if index.column() == 0 and self.selectable:
+        if self.selectable:
             base |= Qt.ItemIsUserCheckable
         return base
 
     # ---------------------------------------------------------------- helpers
 
-    def set_all(self, selected: bool) -> None:
+    def set_all(self, selected: bool, rows: Optional[list[int]] = None) -> None:
         if not self.selectable or not self.entries:
             return
-        for entry in self.entries:
-            entry.selected = selected
-        self.dataChanged.emit(self.index(0, 0), self.index(len(self.entries) - 1, 0), [Qt.CheckStateRole])
+        targets = rows if rows is not None else range(len(self.entries))
+        for row in targets:
+            if 0 <= row < len(self.entries):
+                self.entries[row].selected = selected
+        self.dataChanged.emit(
+            self.index(0, 0), self.index(len(self.entries) - 1, 0), [Qt.CheckStateRole]
+        )
+
+    def selected_count(self) -> int:
+        return sum(1 for entry in self.entries if entry.selected)
+
+    def extra_moves(self, entry: PlanEntry) -> int:
+        if entry.item is None:
+            return 0
+        return sum(1 for op in entry.ops if op.kind is OpKind.MOVE and op.src != entry.item.video.path)
+
+    def size_of(self, entry: PlanEntry) -> int:
+        return self._size_of(entry)
+
+
+class PlanFilterProxy(QSortFilterProxyModel):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFilterRole(SEARCH_ROLE)
+        self.setSortRole(SORT_ROLE)
+        self.needle = ""
+
+    def set_needle(self, text: str) -> None:
+        self.needle = text.strip().lower()
+        if hasattr(self, "invalidateRowsFilter"):
+            self.invalidateRowsFilter()
+        else:  # pragma: no cover - older Qt
+            self.invalidateFilter()
+
+    def filterAcceptsRow(self, row, parent) -> bool:  # noqa: N802
+        if not self.needle:
+            return True
+        index = self.sourceModel().index(row, 0, parent)
+        haystack = self.sourceModel().data(index, SEARCH_ROLE) or ""
+        return all(word in haystack for word in self.needle.split())
