@@ -31,6 +31,13 @@ def main() -> int:
     out.mkdir(parents=True, exist_ok=True)
 
     app = QApplication(sys.argv[:1])
+    # ENDSLATE_SHOT_FONT=12 reproduces a machine whose system font is larger than
+    # the one the layout was designed against, which is where text collided.
+    bump = os.environ.get("ENDSLATE_SHOT_FONT")
+    if bump:
+        from PySide6.QtGui import QFont
+
+        app.setFont(QFont(app.font().family(), int(bump)))
     from endslate.ui import theme
     from endslate.ui.app import MainWindow
 
@@ -69,11 +76,13 @@ def main() -> int:
 
         if plan is not None:
             window.go_to("review")
-            window.review_page.set_filter("needs_you")
-            app.processEvents()
-            path = out / f"{mode}-review-needsyou.png"
-            window.grab().save(str(path))
-            shots.append(path)
+            for bucket in ("needs_you", "duplicate", "junk"):
+                window.review_page.set_filter(bucket)
+                app.processEvents()
+                path = out / f"{mode}-review-{bucket}.png"
+                window.grab().save(str(path))
+                shots.append(path)
+            window.review_page.set_filter("planned")
 
     for path in shots:
         print(path)

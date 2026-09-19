@@ -364,7 +364,8 @@ class MainWindow(QMainWindow):
         if self.scan_result is None:
             return
         self._busy(True, "planning")
-        resolver = Resolver(self.tmdb(), self.overrides, self.show_overrides)
+        self._last_matcher = self.tmdb()
+        resolver = Resolver(self._last_matcher, self.overrides, self.show_overrides)
         self.job = PlanJob(self.scan_result, self.current_preset(), self._options(), matcher=resolver)
         self.job.progress.connect(self._on_progress)
         self.job.failed.connect(self._on_failure)
@@ -379,6 +380,12 @@ class MainWindow(QMainWindow):
             key = str(entry.source_path)
             if key in previous:
                 entry.selected = previous[key]
+        matcher = getattr(self, "_last_matcher", None)
+        if matcher is not None and getattr(matcher, "unreachable", False):
+            plan.provider_note = (
+                f"TMDB could not be reached ({matcher.offline_reason}). Titles and years came "
+                "from the filenames only, so anything without a year is waiting in Needs you."
+            )
         self.plan = plan
         self.review_page.set_plan(plan)
         self.apply_page.set_plan(plan, self._jellyfin_message())
@@ -391,6 +398,39 @@ class MainWindow(QMainWindow):
         total = len(self.plan.selected_operations())
         self.review_page.apply_button.setEnabled(total > 0)
         self.review_page.apply_button.setText(f"Apply {total:,} changes" if total else "Apply")
+        self.apply_page.set_plan(self.plan, self._jellyfin_message())
+
+    # ------------------------------------------------------------ duplicates
+
+    def keep_duplicate(self, entry) -> None:
+        from endslate.planner import keep_one_of_duplicates
+
+        if self.plan is None:
+            return
+        moved = keep_one_of_duplicates(self.plan, entry)
+        if not moved:
+            self.toast("Nothing else was competing for that name", "info", "amber")
+            return
+        self._refresh_after_plan_edit()
+        self.toast(f"Kept one copy, {moved} sent to _Quarantine", "check")
+
+    def keep_largest_duplicates(self) -> None:
+        from endslate.planner import keep_largest_duplicates
+
+        if self.plan is None:
+            return
+        moved = keep_largest_duplicates(self.plan)
+        if not moved:
+            self.toast("No duplicates to resolve", "info", "amber")
+            return
+        self._refresh_after_plan_edit()
+        self.toast(f"Kept the largest of each, {moved} sent to _Quarantine", "check")
+
+    def _refresh_after_plan_edit(self) -> None:
+        current = self.review_page.filter_key
+        self.review_page.set_plan(self.plan)
+        if self.plan.counts().get(current):
+            self.review_page.set_filter(current)
         self.apply_page.set_plan(self.plan, self._jellyfin_message())
 
     # --------------------------------------------------------------- resolve

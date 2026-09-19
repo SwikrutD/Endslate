@@ -104,3 +104,108 @@ def test_the_row_delegate_paints_without_crashing(window, qapp, library):
         option.rect = pixmap.rect()
         delegate.paint(painter, option, window.review_page.proxy.index(row, 0))
     painter.end()
+
+
+def test_the_resolve_dialog_opens_with_candidates(qapp, tmp_path, monkeypatch):
+    """It crashed on open: the candidate list touched a button built after it."""
+    import endslate.config as config_mod
+
+    monkeypatch.setattr(config_mod, "app_dir", lambda: tmp_path)
+    from endslate.models import Candidate, FileKind, Item, ParsedName, ScannedFile
+    from endslate.ui.dialogs import ResolveDialog
+
+    item = Item(
+        video=ScannedFile(path=Path("/library/Movies/The Witch/The Witch.mkv"), size=1, kind=FileKind.VIDEO),
+        parsed=ParsedName(title="The Witch", year=2015),
+    )
+    item.candidates = [
+        Candidate(title="The Witch", year=2015, tmdb_id=1, overview="A farm.", score=1.15),
+        Candidate(title="The Witch", year=2016, tmdb_id=2, overview="Another.", score=1.05),
+    ]
+    dialog = ResolveDialog(item)
+    qapp.processEvents()
+    assert dialog.results.count() == 2
+    assert dialog.confirm.isEnabled()
+
+    dialog.results.setCurrentRow(1)
+    dialog._accept_selected()
+    assert dialog.result_meta == {"title": "The Witch", "year": 2016, "tmdb_id": 2}
+
+
+def test_the_resolve_dialog_opens_with_nothing_to_show(qapp, tmp_path, monkeypatch):
+    import endslate.config as config_mod
+
+    monkeypatch.setattr(config_mod, "app_dir", lambda: tmp_path)
+    from endslate.models import FileKind, Item, ParsedName, ScannedFile
+    from endslate.ui.dialogs import ResolveDialog
+
+    item = Item(
+        video=ScannedFile(path=Path("/library/Movies/Nerve/Nerve.mp4"), size=1, kind=FileKind.VIDEO),
+        parsed=ParsedName(title="Nerve"),
+    )
+    dialog = ResolveDialog(item)
+    qapp.processEvents()
+    assert not dialog.confirm.isEnabled()
+    assert not dialog.empty.isHidden() and dialog.results.isHidden()
+
+
+@pytest.mark.parametrize("point_size", [9, 11, 13])
+def test_cards_never_overlap_their_own_text(qapp, point_size):
+    """The preset cards collided with themselves wherever the system font was larger."""
+    from PySide6.QtGui import QFont
+    from PySide6.QtWidgets import QWidget
+
+    from endslate.ui import theme
+    from endslate.ui.widgets import PresetCard, StatTile
+
+    original = qapp.font()
+    qapp.setFont(QFont(original.family(), point_size))
+    theme.apply_theme(qapp, "dark")
+    try:
+        holder = QWidget()
+        holder.resize(430, 460)
+        card = PresetCard(
+            "Jellyfin",
+            "Jellyfin's documented layout. Folder per movie, Season 01 subfolders.",
+            "Fight Club (1999)\\Fight Club (1999).mkv\nDark (2017) S01E02 Lies.mkv",
+            holder,
+        )
+        card.resize(420, card.sizeHint().height())
+        tile = StatTile("planned", "Already correct", "green", holder)
+        tile.resize(200, tile.sizeHint().height())
+        holder.show()
+        qapp.processEvents()
+
+        assert card.title.geometry().bottom() <= card.description.geometry().top()
+        assert card.description.geometry().bottom() <= card.examples[0].geometry().top()
+        assert card.examples[0].geometry().bottom() <= card.examples[1].geometry().top()
+        assert card.examples[1].geometry().bottom() <= card.height()
+        assert tile.value.geometry().bottom() <= tile.caption.geometry().top()
+        assert tile.caption.geometry().bottom() <= tile.height()
+    finally:
+        qapp.setFont(original)
+        theme.apply_theme(qapp, "dark")
+
+
+def test_the_duplicates_view_offers_a_way_out(window, qapp, tmp_path):
+    from endslate.models import Bucket
+
+    root = tmp_path / "Dupes"
+    for folder, size in (("A Film", 400), ("A Film 2011", 900)):
+        path = root / "Movies" / folder
+        path.mkdir(parents=True)
+        (path / "A Film 2011.mkv").write_bytes(b"x" * size)
+
+    plan = build_plan(scan(root), builtin("Jellyfin"), Options())
+    window.plan = plan
+    window.review_page.set_plan(plan)
+    window.review_page.set_filter("duplicate")
+    qapp.processEvents()
+
+    assert not window.review_page.duplicate_bar.isHidden()
+    assert not window.review_page.keep_button.isHidden()
+
+    window.keep_largest_duplicates()
+    qapp.processEvents()
+    assert not window.plan.by_bucket(Bucket.DUPLICATE)
+    assert window.review_page.tiles["duplicate"].value.text() == "0"

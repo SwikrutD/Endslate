@@ -46,6 +46,10 @@ TILES = [
     ("skipped", "Skipped", "neutral"),
 ]
 
+DUPLICATE_HINT = (
+    "Two files want the same name. The copies you do not keep go to _Quarantine, not the bin."
+)
+
 EMPTY_COPY = {
     "planned": ("check", "Nothing to rename", "Every file already matches the preset. Change the preset or the options to see more."),
     "needs_you": ("sparkle", "Nothing needs you", "Every title matched a film or show confidently."),
@@ -85,12 +89,13 @@ class ReviewPage(Page):
         toolbar = QHBoxLayout()
         toolbar.setSpacing(SPACE["sm"])
         self.search = SearchField("Search titles and paths")
+        self.search.setMinimumWidth(200)
         self.search.textChanged.connect(self._search_changed)
         toolbar.addWidget(self.search)
 
         self.sort = QComboBox()
         self.sort.addItems([f"Sort by {key.lower()}" for key in SORT_KEYS])
-        self.sort.setFixedWidth(184)
+        self.sort.setMinimumWidth(168)
         self.sort.currentIndexChanged.connect(self._sort_changed)
         self.sort.setToolTip("Change the order of the list")
         toolbar.addWidget(self.sort)
@@ -103,7 +108,27 @@ class ReviewPage(Page):
         self.resolve_button = button("Resolve", "default", "sparkle", self.resolve_selected)
         self.resolve_button.setToolTip("Search TMDB for this title, or set it by hand  (Enter)")
         toolbar.addWidget(self.resolve_button)
+
         self.add_layout(toolbar)
+
+        # ------------------------------------------------ duplicate actions
+        self.duplicate_bar = Card(quiet=True, padding=SPACE["md"])
+        bar = QHBoxLayout()
+        bar.setSpacing(SPACE["md"])
+        bar.addWidget(label(DUPLICATE_HINT, "caption", wrap=True), 1)
+        self.keep_button = button("Keep this one", "default", "check", self.keep_selected)
+        self.keep_button.setToolTip(
+            "Keep the selected copy and send the others to _Quarantine. Nothing is deleted."
+        )
+        bar.addWidget(self.keep_button)
+        self.keep_largest_button = button("Keep the largest of each", "primary", "filter", self.keep_largest)
+        self.keep_largest_button.setToolTip(
+            "Resolve every duplicate at once, keeping the biggest file in each group."
+        )
+        bar.addWidget(self.keep_largest_button)
+        self.duplicate_bar.add_layout(bar)
+        self.duplicate_bar.setVisible(False)
+        self.add(self.duplicate_bar)
 
         # ------------------------------------------------------------- table
         self.model = PlanTableModel()
@@ -172,8 +197,13 @@ class ReviewPage(Page):
         self.apply_button.setEnabled(total_ops > 0)
         self.apply_button.setText(f"Apply {total_ops:,} changes" if total_ops else "Apply")
 
-        if plan.notes:
-            self.notes.show_message("  ".join(plan.notes), "blue", "info")
+        messages = list(plan.notes)
+        tone, glyph = "blue", "info"
+        if plan.provider_note:
+            messages.insert(0, plan.provider_note)
+            tone, glyph = "amber", "warning"
+        if messages:
+            self.notes.show_message("   ".join(messages), tone, glyph)
         else:
             self.notes.setVisible(False)
 
@@ -215,6 +245,7 @@ class ReviewPage(Page):
         self._refresh_empty()
         self._refresh_count()
         self.resolve_button.setEnabled(bucket in (Bucket.PLANNED, Bucket.NEEDS_YOU, Bucket.DUPLICATE))
+        self.duplicate_bar.setVisible(bucket is Bucket.DUPLICATE and bool(entries))
 
     def _refresh_empty(self) -> None:
         if self.plan is None:
@@ -285,6 +316,16 @@ class ReviewPage(Page):
         self._refresh_count()
         self.window_ref.plan_selection_changed()
 
+    def keep_selected(self) -> None:
+        entry = self.current_entry()
+        if entry is None or entry.bucket is not Bucket.DUPLICATE:
+            self.window_ref.toast("Select one of the duplicate rows first", "info", "amber")
+            return
+        self.window_ref.keep_duplicate(entry)
+
+    def keep_largest(self) -> None:
+        self.window_ref.keep_largest_duplicates()
+
     def current_entry(self):
         rows = self.table.selectionModel().selectedRows()
         if not rows:
@@ -312,6 +353,14 @@ class ReviewPage(Page):
             return
 
         menu = QMenu(self)
+        if entry.bucket is Bucket.DUPLICATE:
+            menu.addAction(
+                QAction("Keep this copy, quarantine the rest", menu, triggered=self.keep_selected)
+            )
+            menu.addAction(
+                QAction("Keep the largest of every duplicate", menu, triggered=self.keep_largest)
+            )
+            menu.addSeparator()
         if entry.item is not None:
             menu.addAction(QAction("Resolve this title\tEnter", menu, triggered=self.resolve_selected))
         if self.model.selectable:

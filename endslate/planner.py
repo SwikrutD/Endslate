@@ -50,6 +50,7 @@ def build_plan(
     plan = Plan(root=scan.root, preset=preset.name)
 
     quarantine_root = scan.root / QUARANTINE_DIRNAME / options.run_stamp
+    plan.quarantine_root = quarantine_root
     junk_dirs = _whole_junk_dirs(scan)
 
     items = _collect_items(scan, junk_dirs)
@@ -392,6 +393,83 @@ def _foreign_subtitle_entries(items: list[Item], options: Options, quarantine_ro
                     )
                 )
     return out
+
+
+def duplicate_group(plan: Plan, entry: PlanEntry) -> list[PlanEntry]:
+    """The other files fighting for the same name."""
+    target = entry.target_path
+    if target is None:
+        return [entry]
+    return [
+        other for other in plan.entries
+        if other.bucket is Bucket.DUPLICATE and other.target_path == target
+    ]
+
+
+def keep_one_of_duplicates(plan: Plan, keeper: PlanEntry) -> int:
+    """Keep this copy, send the others to _Quarantine.
+
+    Nothing is deleted here either. The losing copies move out of the library so
+    the media server stops seeing them, and sit in _Quarantine until emptied.
+    """
+    group = duplicate_group(plan, keeper)
+    if len(group) < 2:
+        return 0
+    target = keeper.target_path
+    quarantine_root = plan.quarantine_root or (plan.root / QUARANTINE_DIRNAME / "manual")
+    moved = 0
+    for entry in group:
+        if entry is keeper:
+            entry.bucket = Bucket.PLANNED
+            entry.selected = True
+            entry.reason = "the copy you chose to keep"
+            continue
+        source = entry.source_path
+        if source is None:
+            continue
+        size = entry.item.video.size if entry.item is not None else 0
+        entry.bucket = Bucket.JUNK
+        entry.selected = True
+        entry.reason = f"duplicate of {target.name if target else 'the kept copy'}, not the one you kept"
+        entry.ops = [
+            Operation(
+                OpKind.QUARANTINE,
+                source,
+                _quarantine_target(source, plan.root, quarantine_root),
+                size=size,
+                reason="duplicate you did not keep",
+            )
+        ]
+        if entry.item is not None:
+            for sub in entry.item.subtitles:
+                entry.ops.append(
+                    Operation(
+                        OpKind.QUARANTINE,
+                        sub.path,
+                        _quarantine_target(sub.path, plan.root, quarantine_root),
+                        size=sub.size,
+                        reason="subtitle of a duplicate",
+                    )
+                )
+        moved += 1
+    return moved
+
+
+def keep_largest_duplicates(plan: Plan) -> int:
+    """Resolve every duplicate group at once, keeping the biggest file in each."""
+    resolved = 0
+    while True:
+        remaining = [e for e in plan.entries if e.bucket is Bucket.DUPLICATE]
+        if not remaining:
+            break
+        group = duplicate_group(plan, remaining[0])
+        if len(group) < 2:
+            remaining[0].bucket = Bucket.PLANNED
+            remaining[0].selected = True
+            continue
+        keeper = max(group, key=lambda e: e.item.video.size if e.item is not None else 0)
+        resolved += keep_one_of_duplicates(plan, keeper)
+    return resolved
 
 
 def _notes(scan: LibraryScan) -> list[str]:

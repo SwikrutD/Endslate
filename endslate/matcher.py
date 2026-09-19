@@ -76,6 +76,8 @@ class TmdbMatcher:
         self.limiter = RateLimiter()
         self._session = session
         self.offline_reason = ""
+        self.lookups = 0
+        self.answered = 0
 
     # ---------------------------------------------------------------- transport
 
@@ -88,8 +90,10 @@ class TmdbMatcher:
 
     def _get(self, path: str, **params) -> Optional[dict]:
         key = path + "?" + "&".join(f"{k}={v}" for k, v in sorted(params.items())) + f"&lang={self.language}"
+        self.lookups += 1
         cached = self.cache.get(key)
         if cached is not None:
+            self.answered += 1
             return cached
         if not self.api_key:
             return None
@@ -112,6 +116,7 @@ class TmdbMatcher:
             return None
         data = response.json()
         self.cache.put(key, data)
+        self.answered += 1
         return data
 
     # ------------------------------------------------------------------ movies
@@ -175,6 +180,15 @@ class TmdbMatcher:
             if number is not None:
                 out[int(number)] = name
         return out
+
+    @property
+    def unreachable(self) -> bool:
+        """True once a lookup has failed and nothing has answered.
+
+        Without this a network outage silently pushes every title into Needs you,
+        which looks like the matcher deciding rather than the network failing.
+        """
+        return bool(self.api_key) and bool(self.offline_reason) and self.answered == 0
 
     # ---------------------------------------------------------------- scoring
 
@@ -241,6 +255,10 @@ class TmdbMatcher:
             if not item.parsed.title:
                 item.confidence = Confidence.NONE
                 continue
+            if self.unreachable:
+                item.confidence = _fallback_confidence(item)
+                item.note = f"TMDB unreachable ({self.offline_reason}), used the filename"
+                continue
             key = (normalize_title(item.parsed.title), item.parsed.year)
             if key in movie_cache:
                 best = movie_cache[key]
@@ -250,8 +268,10 @@ class TmdbMatcher:
                     continue
             else:
                 candidates = self.search_movie(item.parsed.title, item.parsed.year)
-                if not candidates and not self.api_key:
+                if not candidates and (not self.api_key or self.unreachable):
                     item.confidence = _fallback_confidence(item)
+                    if self.unreachable:
+                        item.note = f"TMDB unreachable ({self.offline_reason}), used the filename"
                     continue
                 best = self._decide(item, candidates, item.parsed.title, item.parsed.year)
                 movie_cache[key] = best
@@ -269,10 +289,17 @@ class TmdbMatcher:
             if progress:
                 progress("matching", min(done, total), total)
             sample = group[0]
-            candidates = self.search_show(show_name, sample.parsed.year)
-            if not candidates and not self.api_key:
+            if self.unreachable:
                 for item in group:
                     item.confidence = _fallback_confidence(item)
+                    item.note = f"TMDB unreachable ({self.offline_reason}), used the filename"
+                continue
+            candidates = self.search_show(show_name, sample.parsed.year)
+            if not candidates and (not self.api_key or self.unreachable):
+                for item in group:
+                    item.confidence = _fallback_confidence(item)
+                    if self.unreachable:
+                        item.note = f"TMDB unreachable ({self.offline_reason}), used the filename"
                 continue
             best = self._decide(sample, candidates, show_name, sample.parsed.year)
             if best is None:

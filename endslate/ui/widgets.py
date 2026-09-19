@@ -8,6 +8,7 @@ from PySide6.QtGui import QColor, QFont
 from PySide6.QtWidgets import (
     QCheckBox,
     QFrame,
+    QLayout,
     QGraphicsOpacityEffect,
     QHBoxLayout,
     QLabel,
@@ -62,6 +63,49 @@ def button(text: str, variant: str = "default", icon_name: str = "", on_click=No
     return out
 
 
+class ClickableCard(QFrame):
+    """A card that behaves like a button.
+
+    Qt will not grow a QPushButton to fit a layout placed inside it, so a card
+    built on one collides with its own text wherever the system font is larger
+    than the one it was designed against. A frame sizes to its content.
+    """
+
+    clicked = Signal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setCursor(Qt.PointingHandCursor)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self._checked = False
+        self._hover = False
+
+    def isChecked(self) -> bool:  # noqa: N802
+        return self._checked
+
+    def setChecked(self, value: bool) -> None:  # noqa: N802
+        self._checked = bool(value)
+        self.restyle()
+
+    def restyle(self) -> None:  # overridden
+        pass
+
+    def mouseReleaseEvent(self, event):  # noqa: N802
+        if event.button() == Qt.LeftButton and self.rect().contains(event.position().toPoint()):
+            self.clicked.emit()
+        super().mouseReleaseEvent(event)
+
+    def enterEvent(self, event):  # noqa: N802
+        self._hover = True
+        self.restyle()
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):  # noqa: N802
+        self._hover = False
+        self.restyle()
+        super().leaveEvent(event)
+
+
 class Card(QFrame):
     """A panel. `quiet` is the inset variant used for nested blocks."""
 
@@ -104,25 +148,22 @@ class Pill(QLabel):
         )
 
 
-class StatTile(QPushButton):
+class StatTile(ClickableCard):
     """A filter that shows its own count. Clicking it narrows the table."""
 
     def __init__(self, key: str, title: str, tone: str, parent=None):
         super().__init__(parent)
         self.key = key
         self.tone = tone
-        self.setCheckable(True)
-        self.setCursor(Qt.PointingHandCursor)
-        self.setMinimumHeight(84)
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(SPACE["md"], SPACE["md"], SPACE["md"], SPACE["md"])
-        layout.setSpacing(1)
+        layout.setSpacing(2)
 
         top = QHBoxLayout()
         top.setSpacing(SPACE["sm"])
         self.value = QLabel("0")
+        theme.apply_role_font(self.value, "metric")
         top.addWidget(self.value)
         top.addStretch(1)
         self.dot = QLabel()
@@ -133,6 +174,7 @@ class StatTile(QPushButton):
         self.caption = QLabel(title)
         self.caption.setWordWrap(False)
         self.caption.setMinimumWidth(0)
+        theme.apply_role_font(self.caption, "caption")
         self._caption_text = title
         layout.addWidget(self.caption)
         self.restyle()
@@ -143,33 +185,28 @@ class StatTile(QPushButton):
 
     def set_count(self, count: int) -> None:
         self.value.setText(f"{count:,}")
-        self.setEnabled(True)
 
     def restyle(self) -> None:
         palette = theme.active()
-        strong, soft, _text = tone_colours(palette, self.tone)
+        strong, _soft, _text = tone_colours(palette, self.tone)
         selected = self.isChecked()
+        background = palette.surface_alt if (selected or self._hover) else palette.surface
+        border = strong if selected else (palette.line_strong if self._hover else palette.line)
         self.setStyleSheet(
-            "QPushButton {"
-            f"  background: {palette.surface_alt if selected else palette.surface};"
-            f"  border: 1px solid {strong if selected else palette.line};"
-            f"  border-radius: {RADIUS_MD}px; text-align: left; padding: 0px;"
-            "}"
-            f"QPushButton:hover {{ background: {palette.surface_alt}; border-color: {palette.line_strong}; }}"
+            f"QFrame {{ background: {background}; border: 1px solid {border};"
+            f" border-radius: {RADIUS_MD}px; }}"
         )
-        self.dot.setStyleSheet(f"background: {strong}; border-radius: 4px;")
+        self.dot.setStyleSheet(f"background: {strong}; border-radius: 4px; border: none;")
         theme.apply_role_font(self.caption, "caption")
         self.caption.setStyleSheet(
-            f"color: {palette.text if selected else palette.text_dim}; font-weight: 600;"
+            f"color: {palette.text if selected else palette.text_dim};"
+            " font-weight: 600; background: transparent; border: none;"
         )
         theme.apply_role_font(self.value, "metric")
         self.value.setStyleSheet(
             f"color: {palette.text if selected else palette.text_dim};"
+            " background: transparent; border: none;"
         )
-
-    def setChecked(self, value: bool) -> None:  # noqa: N802
-        super().setChecked(value)
-        self.restyle()
 
 
 class ToggleRow(QWidget):
@@ -210,65 +247,67 @@ class ToggleRow(QWidget):
         self.check.setChecked(value)
 
 
-class PresetCard(QPushButton):
-    """A naming preset, shown with the filename it actually produces."""
+class PresetCard(ClickableCard):
+    """A naming preset, shown with the two filenames it actually produces."""
 
     def __init__(self, name: str, description: str, example: str, parent=None):
         super().__init__(parent)
         self.preset_name = name
-        self.setCheckable(True)
-        self.setCursor(Qt.PointingHandCursor)
-        self.setMinimumHeight(132)
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(SPACE["lg"], SPACE["md"], SPACE["lg"], SPACE["md"])
         layout.setSpacing(SPACE["xs"])
+        layout.setSizeConstraint(QLayout.SetMinimumSize)
 
         header = QHBoxLayout()
+        header.setSpacing(SPACE["sm"])
         self.title = QLabel(name)
+        theme.apply_role_font(self.title, "subtitle")
         self.mark = QLabel()
         self.mark.setFixedSize(16, 16)
         header.addWidget(self.title)
         header.addStretch(1)
-        header.addWidget(self.mark)
+        header.addWidget(self.mark, 0, Qt.AlignTop)
         layout.addLayout(header)
 
         self.description = QLabel(description)
         self.description.setWordWrap(True)
-        layout.addWidget(self.description)
-        layout.addStretch(1)
+        self.description.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.MinimumExpanding)
+        theme.apply_role_font(self.description, "caption")
+        layout.addWidget(self.description, 1)
+        layout.addSpacing(SPACE["xs"])
 
         self.examples = [QLabel(""), QLabel("")]
         self._example_lines = example.split("\n")
         for line in self.examples:
             line.setWordWrap(False)
             line.setMinimumWidth(0)
+            theme.apply_role_font(line, "mono")
             layout.addWidget(line)
         self.example = self.examples[0]
         self.restyle()
 
     def resizeEvent(self, event):  # noqa: N802
         super().resizeEvent(event)
+        self._elide()
+
+    def _elide(self) -> None:
         for index, line in enumerate(self.examples):
             text = self._example_lines[index] if index < len(self._example_lines) else ""
             elide(line, text, Qt.ElideMiddle)
 
     def set_example(self, text: str) -> None:
         self._example_lines = text.split("\n")
-        for index, line in enumerate(self.examples):
-            elide(line, self._example_lines[index] if index < len(self._example_lines) else "", Qt.ElideMiddle)
+        self._elide()
 
     def restyle(self) -> None:
         palette = theme.active()
         selected = self.isChecked()
+        border = palette.accent if (selected or self._hover) else palette.line
         self.setStyleSheet(
-            "QPushButton {"
-            f"  background: {palette.accent_soft if selected else palette.surface};"
-            f"  border: 1px solid {palette.accent if selected else palette.line};"
-            f"  border-radius: {RADIUS_MD}px; text-align: left; padding: 0;"
-            "}"
-            f"QPushButton:hover {{ border-color: {palette.accent if selected else palette.line_strong}; }}"
+            f"QFrame {{ background: {palette.accent_soft if selected else palette.surface};"
+            f" border: 1px solid {border}; border-radius: {RADIUS_MD}px; }}"
+            " QLabel { background: transparent; border: none; }"
         )
         theme.apply_role_font(self.title, "subtitle")
         self.title.setStyleSheet(f"color: {palette.text}; font-weight: 600;")
@@ -280,10 +319,6 @@ class PresetCard(QPushButton):
         self.mark.setPixmap(
             icons.pixmap("check", palette.accent, 16) if selected else icons.pixmap("dot", palette.line, 16)
         )
-
-    def setChecked(self, value: bool) -> None:  # noqa: N802
-        super().setChecked(value)
-        self.restyle()
 
 
 class SearchField(QLineEdit):

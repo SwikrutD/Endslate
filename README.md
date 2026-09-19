@@ -83,6 +83,17 @@ listening on the Jellyfin port and warns you, but the check is a courtesy, not a
 | `Ctrl` `A` | Tick everything the filter is showing |
 
 Right-click any row to open its folder in Explorer, copy either path, or exclude it.
+
+## Duplicates
+
+When two files resolve to the same name, neither moves and both wait on the Duplicates
+tab. Pick one and press **Keep this one**, or press **Keep the largest of each** to settle
+every group at once. The copies you do not keep go to `_Quarantine` alongside the junk, so
+nothing is deleted and the run is still reversible.
+
+Two different cuts of the same film are not duplicates: Endslate tells them apart by
+edition, part, resolution or source and names them `Housefull 5 (2025) - A.mkv` and
+`- B.mkv`. It reads those markers back on the next scan, so a second run leaves them alone.
 The theme follows Windows by default and can be pinned to dark or light in Settings.
 
 ## Presets

@@ -124,3 +124,105 @@ def test_already_correct_names_are_left_alone(tmp_path):
     planned = plan.by_bucket(Bucket.PLANNED)
     assert not planned, [f"{e.source_path.name} -> {e.target_path.name}" for e in planned]
     assert len(plan.by_bucket(Bucket.NOOP)) == len(CLEAN)
+
+
+# ------------------------------------------------------- reading our own output
+
+
+def test_a_part_marker_we_wrote_is_read_back(tmp_path):
+    """Housefull 5 A and B came back as a duplicate pair on the second scan."""
+    from endslate.models import Bucket
+    from endslate.parser import parse
+
+    assert parse("Housefull 5 (2025) - A.mkv").part == "A"
+    assert parse("Housefull 5 (2025) - B.mkv").part == "B"
+    assert parse("Dune - Part One (2021).mkv").part == ""
+    assert parse("Dune - Part One (2021).mkv").title == "Dune - Part One"
+
+    root = tmp_path / "Media"
+    folder = root / "Movies" / "Housefull 5 (2025)"
+    folder.mkdir(parents=True)
+    (folder / "Housefull 5 (2025) - A.mkv").write_bytes(b"a" * 40)
+    (folder / "Housefull 5 (2025) - B.mkv").write_bytes(b"b" * 20)
+
+    plan = build_plan(scan(root), builtin("Jellyfin"), Options())
+    assert not plan.by_bucket(Bucket.DUPLICATE)
+    assert len(plan.by_bucket(Bucket.NOOP)) == 2
+
+
+# ----------------------------------------------------------------- duplicates
+
+
+def _duplicate_library(tmp_path):
+    root = tmp_path / "Media"
+    for folder, name, size in (
+        ("My Big Fat Greek Wedding 2", "My Big Fat Greek Wedding 2 2016.mp4", 400),
+        ("My Big Fat Greek Wedding 2 2016", "My Big Fat Greek Wedding 2 2016.mp4", 900),
+    ):
+        path = root / "Movies" / folder
+        path.mkdir(parents=True)
+        (path / name).write_bytes(b"x" * size)
+    return root
+
+
+def test_a_duplicate_can_be_resolved_by_keeping_one(tmp_path):
+    from endslate.models import Bucket
+    from endslate.planner import keep_one_of_duplicates
+
+    plan = build_plan(scan(_duplicate_library(tmp_path)), builtin("Jellyfin"), Options())
+    group = plan.by_bucket(Bucket.DUPLICATE)
+    assert len(group) == 2
+
+    moved = keep_one_of_duplicates(plan, group[0])
+    assert moved == 1
+    assert group[0].bucket is Bucket.PLANNED
+    assert group[1].bucket is Bucket.JUNK
+    assert "_Quarantine" in str(group[1].target_path)
+    assert group[1].ops[0].kind.value == "quarantine"
+    assert not plan.by_bucket(Bucket.DUPLICATE)
+
+
+def test_keeping_the_largest_resolves_every_group(tmp_path):
+    from endslate.models import Bucket
+    from endslate.planner import keep_largest_duplicates
+
+    plan = build_plan(scan(_duplicate_library(tmp_path)), builtin("Jellyfin"), Options())
+    assert keep_largest_duplicates(plan) == 1
+    kept = [e for e in plan.entries if e.bucket is Bucket.PLANNED]
+    assert len(kept) == 1
+    assert kept[0].item.video.size == 900
+    assert not plan.by_bucket(Bucket.DUPLICATE)
+
+
+def test_nothing_is_deleted_when_resolving_a_duplicate(tmp_path):
+    from endslate.models import Bucket, OpKind
+    from endslate.planner import keep_largest_duplicates
+
+    plan = build_plan(scan(_duplicate_library(tmp_path)), builtin("Jellyfin"), Options())
+    keep_largest_duplicates(plan)
+    for entry in plan.entries:
+        for op in entry.ops:
+            assert op.kind in (OpKind.MKDIR, OpKind.MOVE, OpKind.QUARANTINE)
+
+
+# --------------------------------------------------------- provider outage
+
+
+def test_an_unreachable_provider_falls_back_to_the_filename(tmp_path):
+    """A network outage was silently pushing every title into Needs you."""
+    from endslate.cache import Cache
+    from endslate.matcher import TmdbMatcher
+    from endslate.models import Confidence
+
+    class DeadSession:
+        def get(self, *args, **kwargs):
+            raise OSError("getaddrinfo failed")
+
+    matcher = TmdbMatcher("key", cache=Cache(tmp_path / "c.sqlite"), session=DeadSession())
+    items = [movie_item("Fight Club", 1999), movie_item("Rush Hour")]
+    matcher.match_all(items)
+
+    assert matcher.unreachable
+    assert items[0].confidence is Confidence.HIGH
+    assert "unreachable" in items[0].note
+    assert items[1].confidence is Confidence.LOW

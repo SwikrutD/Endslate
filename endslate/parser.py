@@ -115,6 +115,11 @@ _YEAR_BRACKETED = re.compile(r"[\[(](?P<y>19\d{2}|20\d{2})[\])]")
 _YEAR_BARE = re.compile(r"(?<![A-Za-z0-9])(?P<y>19\d{2}|20\d{2})(?![A-Za-z0-9])")
 _PART_RE = re.compile(r"(?<![A-Za-z0-9])(?:cd|disc|disk|part|pt)[\s._\-]*(?P<p>\d{1,2})(?![0-9])", re.I)
 _TRAILING_CUT_RE = re.compile(r"^(?P<base>.*\d)\s*(?P<letter>[A-D])$")
+# Endslate's own output for a multi-cut release: "Housefull 5 (2025) - A.mkv".
+# Without this the part is lost on a rescan and the two cuts collide.
+_OWN_PART_RE = re.compile(
+    r"\)\s*-\s*(?P<part>[A-D]|(?:Part|Pt|CD|Disc)\s*\d{1,2})\s*$", re.I
+)
 _SAMPLE_RE = re.compile(r"(?<![A-Za-z0-9])sample(?![A-Za-z0-9])", re.I)
 
 MAX_SANE_YEAR = 2100
@@ -298,6 +303,9 @@ def parse(name: str, *, is_dir: bool = False) -> ParsedName:
 
     # 6. Decorations.
     out.edition = detect_edition(raw)
+    own = _OWN_PART_RE.search(raw)
+    if own:
+        out.part = own.group("part").strip()
     pm = _PART_RE.search(raw)
     if pm and not out.part:
         out.part = pm.group("p")

@@ -175,6 +175,8 @@ class Plan:
     preset: str
     entries: list[PlanEntry] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
+    quarantine_root: Optional[Path] = None
+    provider_note: str = ""
 
     def by_bucket(self, bucket: Bucket) -> list[PlanEntry]:
         return [e for e in self.entries if e.bucket == bucket]

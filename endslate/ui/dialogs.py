@@ -160,7 +160,6 @@ class ResolveDialog(QDialog):
             "Search TMDB, or type the title and year in below.",
         )
         layout.addWidget(self.empty)
-        self._fill(item.candidates)
 
         layout.addWidget(Divider())
         manual_row = QHBoxLayout()
@@ -190,6 +189,9 @@ class ResolveDialog(QDialog):
         self.confirm = button("Use the selected result", "primary", "check", self._accept_selected)
         footer.addWidget(self.confirm)
         layout.addLayout(footer)
+
+        # Filling the list touches the footer buttons, so it happens last.
+        self._fill(item.candidates)
 
     # ------------------------------------------------------------------ list
 
