@@ -25,9 +25,12 @@ echo.
 echo Checking dependencies...
 "%CONPY%" -m pip install --disable-pip-version-check -r requirements.txt
 echo.
-echo Running the test suite...
-"%CONPY%" -m pytest -q
-echo.
+"%CONPY%" -c "import pytest" >nul 2>&1
+if not errorlevel 1 (
+    echo Running the test suite...
+    "%CONPY%" -m pytest -q
+    echo.
+)
 echo Opening the window. Errors will appear below.
 "%CONPY%" -m endslate gui
 echo.
