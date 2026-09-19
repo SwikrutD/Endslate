@@ -11,6 +11,8 @@ python -m PyInstaller `
     --onefile `
     --windowed `
     --name Endslate `
+    --icon assets/endslate.ico `
+    --add-data "assets;assets" `
     --collect-submodules endslate `
     endslate/ui/app.py
 

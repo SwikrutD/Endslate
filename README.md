@@ -23,24 +23,36 @@ TV Shows\The 100\The.100.S01...\The.100.S01E04.Murphys.Law.1080p.AMZN.WEB-DL...m
 - Write outside the library root
 - Open a video file for writing. It reads names and sizes, nothing else
 
-## Install
+## Opening it
 
-Needs Python 3.10 or newer.
+No terminal required. In the Endslate folder there are three files you can double-click:
+
+| File | What it does |
+| --- | --- |
+| **Setup Endslate.cmd** | Run this once. Installs what Endslate needs and puts an icon on your Desktop and in the Start Menu. The icon opens the window with no console at all |
+| **Endslate.cmd** | Opens the window. Installs anything missing first. Works whether or not you ran setup |
+| **Endslate (show errors).cmd** | The same, but keeps the console open and prints everything. Use it when the normal launcher appears to do nothing |
+
+All three need Python 3.10 or newer on PATH. If it is missing, the launcher says so and
+tells you what to install. Nothing is ever installed without showing you.
+
+If you would rather use a terminal:
 
 ```powershell
-git clone <this repo> ; cd Endslate
 python -m pip install -r requirements.txt
 python -m endslate gui
 ```
 
-To build a standalone `Endslate.exe`:
+To build a standalone `Endslate.exe` that needs no Python at all:
 
 ```powershell
 .\scripts\build.ps1
 ```
 
-Settings, the metadata cache and the run journals live in `%LOCALAPPDATA%\Endslate\`,
-never inside the media library.
+Settings, the metadata cache, the run journals and a crash log live in
+`%LOCALAPPDATA%\Endslate\`, never inside the media library. When the window is opened
+from the Desktop icon there is no console to print to, so any error is written to
+`%LOCALAPPDATA%\Endslate\endslate.log` and shown in a dialog.
 
 ## First run
 

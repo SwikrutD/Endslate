@@ -129,9 +129,29 @@ def _undo(args) -> int:
     return 0 if result.ok else 5
 
 
-def _gui(args) -> int:
-    from endslate.ui.app import run_app
+def _alert(title: str, message: str) -> None:
+    """Say something visible even when there is no console to print to."""
+    try:
+        import ctypes
 
+        ctypes.windll.user32.MessageBoxW(None, message, title, 0x10)
+        return
+    except Exception:
+        pass
+    print(f"{title}: {message}", file=sys.stderr)
+
+
+def _gui(args) -> int:
+    try:
+        from endslate.ui.app import run_app
+    except ImportError as exc:
+        _alert(
+            "Endslate cannot open",
+            "The window toolkit is missing or broken.\n\n"
+            f"{exc}\n\n"
+            "Run \"Setup Endslate.cmd\" in the Endslate folder to reinstall it.",
+        )
+        return 1
     return run_app()
 
 

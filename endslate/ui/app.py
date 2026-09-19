@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Optional
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QAction, QFont
+from PySide6.QtGui import QAction, QFont, QIcon
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QApplication,
@@ -782,10 +782,53 @@ class MainWindow(QMainWindow):
         QMessageBox.information(self, "Undo finished", message)
 
 
+def _log_path() -> Path:
+    return app_dir() / "endslate.log"
+
+
+def _record_crash(text: str) -> Path:
+    path = _log_path()
+    try:
+        with open(path, "a", encoding="utf-8") as handle:
+            handle.write(f"\n===== {_dt.datetime.now():%Y-%m-%d %H:%M:%S} =====\n{text}\n")
+    except OSError:
+        pass
+    return path
+
+
+def _install_crash_handler(app) -> None:
+    """Launched from a shortcut there is no console, so an error would vanish."""
+    import traceback
+
+    def hook(kind, value, tb):
+        text = "".join(traceback.format_exception(kind, value, tb))
+        path = _record_crash(text)
+        try:
+            box = QMessageBox(QMessageBox.Critical, "Endslate hit a problem", str(value))
+            box.setInformativeText(f"The details are in {path}")
+            box.setDetailedText(text)
+            box.exec()
+        except Exception:
+            pass
+
+    sys.excepthook = hook
+
+
 def run_app() -> int:
     app = QApplication(sys.argv)
     app.setApplicationName("Endslate")
-    window = MainWindow()
+    icon_file = Path(__file__).resolve().parent.parent.parent / "assets" / "endslate.ico"
+    if icon_file.exists():
+        app.setWindowIcon(QIcon(str(icon_file)))
+    _install_crash_handler(app)
+    try:
+        window = MainWindow()
+    except Exception as exc:
+        import traceback
+
+        path = _record_crash(traceback.format_exc())
+        QMessageBox.critical(None, "Endslate could not start", f"{exc}\n\nDetails in {path}")
+        return 1
     window.show()
     return app.exec()
 
