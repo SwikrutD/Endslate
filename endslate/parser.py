@@ -18,11 +18,14 @@ ARTWORK_EXTS = {".jpg", ".jpeg", ".png", ".webp", ".tbn"}
 
 RESOLUTIONS = {"2160p", "1080p", "720p", "480p", "576p", "1440p", "4k", "8k", "uhd", "fhd", "qhd", "hd", "sd"}
 
+# Deliberately excludes "red", "sky", "max", "stan" and "cam". They are real
+# streaming and capture tags, and they are also ordinary words that turn up in
+# episode titles: Red Alert, Red Sky at Morning, Red Queen, Max Payne.
 SOURCES = {
     "bluray", "blu", "brrip", "bdrip", "bdremux", "remux", "webrip", "webdl", "web", "hdrip",
-    "dvdrip", "dvdscr", "dvd", "hdtv", "pdtv", "predvd", "hdcam", "camrip", "cam", "telesync",
-    "amzn", "nf", "netflix", "itunes", "dsnp", "hmax", "atvp", "hulu", "pcok", "stan", "sky",
-    "max", "pmtp", "crav", "red", "vmax", "uhdtv", "hdts",
+    "dvdrip", "dvdscr", "dvd", "hdtv", "pdtv", "predvd", "hdcam", "camrip", "telesync",
+    "amzn", "nf", "netflix", "itunes", "dsnp", "hmax", "atvp", "hulu", "pcok",
+    "pmtp", "crav", "vmax", "uhdtv", "hdts",
 }
 
 CODECS = {
@@ -34,7 +37,7 @@ HDR = {"hdr", "hdr10", "hdr10plus", "dv", "dovi", "sdr", "hlg"}
 
 AUDIO = {
     "aac", "ac3", "eac3", "dd", "ddp", "dts", "dtshd", "truehd", "atmos", "flac", "mp3", "opus",
-    "ma", "5", "6ch", "2ch", "8ch", "lpcm", "pcm", "aac5", "ddp5", "dd5", "aac2", "ddp2", "dd2",
+    "ma", "6ch", "2ch", "8ch", "lpcm", "pcm", "aac5", "ddp5", "dd5", "aac2", "ddp2", "dd2",
     "224kbps", "640kbps", "dtsx",
 }
 
@@ -141,14 +144,31 @@ def _normalize_separators(text: str) -> str:
     return out.strip()
 
 
+_OPENERS = {")": "(", "]": "[", "}": "{"}
+_EDGE = " -_.+,&"
+
+
 def _clean_title(text: str) -> str:
+    """Trim separators from the edges without breaking a balanced bracket.
+
+    "Dreamscaperers (1)" must keep its closing bracket. "Dune - Part One (" must
+    lose its dangling one.
+    """
     out = _normalize_separators(text)
-    out = out.strip(" -_.[](){}+,&")
-    out = re.sub(r"\s*-\s*$", "", out)
-    out = re.sub(r"\s+", " ", out)
-    # A lone trailing "(" or "[" left by a cut mid-bracket.
-    out = out.rstrip(" ([{-")
-    return out.strip()
+    while out and out[0] in _EDGE + "([{":
+        out = out[1:]
+    changed = True
+    while changed and out:
+        changed = False
+        while out and out[-1] in _EDGE:
+            out, changed = out[:-1], True
+        if out and out[-1] in _OPENERS:
+            opener = _OPENERS[out[-1]]
+            if out.count(opener) < out.count(out[-1]):
+                out, changed = out[:-1], True
+        if out and out[-1] in "([{":
+            out, changed = out[:-1], True
+    return re.sub(r"\s+", " ", out).strip()
 
 
 def _titlecase_if_shouted(text: str) -> str:
@@ -271,9 +291,6 @@ def parse(name: str, *, is_dir: bool = False) -> ParsedName:
             if start >= tail_start:
                 tail_end = start
                 break
-        ytail = _YEAR_BARE.search(raw, tail_start)
-        if ytail and ytail.start() < tail_end:
-            tail_end = ytail.start()
         candidate = _clean_title(raw[tail_start:tail_end])
         candidate = re.sub(r"^(?:e\d{1,3}|-|–)\s*", "", candidate, flags=re.I).strip(" -")
         if candidate:
@@ -288,7 +305,7 @@ def parse(name: str, *, is_dir: bool = False) -> ParsedName:
         if re.search(_BOUND + re.escape(token) + _EBOUND, raw, re.I):
             out.resolution = token if token != "4k" else "2160p"
             break
-    for token in ("bluray", "remux", "webrip", "webdl", "web", "hdtv", "dvdrip", "hdrip", "brrip", "bdrip", "predvd", "cam"):
+    for token in ("bluray", "remux", "webrip", "webdl", "web", "hdtv", "dvdrip", "hdrip", "brrip", "bdrip", "predvd"):
         if re.search(_BOUND + re.escape(token) + _EBOUND, raw, re.I):
             out.source = {"webdl": "WEB-DL", "web": "WEB", "bluray": "BluRay"}.get(token, token.upper())
             break

@@ -83,6 +83,17 @@ redundant duplicate tracks go to `_Quarantine`.
 Pairing handles four layouts: same folder same stem, same folder different stem, a `Subs`
 subfolder, and a sidecar season folder such as `Dark - season 1.en\`.
 
+## Windows paths
+
+Every filesystem call goes through `fsops.py`, which adds the `\\?\` extended-length
+prefix on Windows. Without it a source path over 259 characters fails to move and the
+file is silently left behind. A rename that changes only letter case goes via a
+temporary name, since a case-insensitive filesystem treats it as a no-op otherwise.
+
+After a run, every move is verified: if a file is not at its target and nothing raised,
+it is reported as a problem rather than passing quietly. Problems are listed in the Apply
+log and written to `<run id>-problems.txt` beside the journal.
+
 ## Junk
 
 Swept to `M:\Media\_Quarantine\<run timestamp>\` with the original relative path kept
@@ -131,6 +142,7 @@ against the real library without risk.
 | `executor.py` | Preflight, move, sweep, undo. The only writer |
 | `journal.py` | Append-only JSONL record of every operation |
 | `sanitize.py` | Make any title legal on Windows without mangling it |
+| `fsops.py` | Filesystem calls that cope with long paths and case-only renames |
 | `ui/` | PySide6 window. Thin, all logic lives below it |
 
 ## Tests
@@ -141,6 +153,7 @@ python -m pytest
 ```
 
 `tests/fixtures/names.py` is the parser's specification: real filenames with the parse each
-must produce. Add a row whenever a name surprises you. The executor is tested against a
+must produce. Add a row whenever a name surprises you. `tests/test_regressions.py` holds one
+test per bug found by running against the real library. The executor is tested against a
 generated tree that reproduces every folder shape found in a real library, and the
 apply-then-undo round trip asserts the tree comes back byte-identical.

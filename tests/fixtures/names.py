@@ -42,6 +42,13 @@ MOVIE_NAMES = [
     ("Rush Hour", True, {"title": "Rush Hour", "year": None}),
     ("Beauty And The Beast", True, {"title": "Beauty And The Beast", "year": None}),
     ("INDIANA JONES RAIDERS LOST ARK", True, {"title": "Indiana Jones Raiders Lost Ark"}),
+    ("Max.Payne.2008.1080p.BluRay.x264.mkv", False, {"title": "Max Payne", "year": 2008}),
+    ("Stan.And.Ollie.2018.1080p.WEB-DL.mkv", False, {"title": "Stan And Ollie", "year": 2018}),
+    ("Housefull 5 (2025).mkv", False, {"title": "Housefull 5", "year": 2025}),
+    ("The Witch 2015 1080p 10bit BluRay HEVC x265 [Hindi NF DDP 5.1 640kbps + English AAC 5.1] ESub-PSA-4kHdHub", True,
+     {"title": "The Witch", "year": 2015}),
+    ("Fight Club (1999).mkv", False, {"title": "Fight Club", "year": 1999}),
+    ("Dune - Part One (2021).mkv", False, {"title": "Dune - Part One", "year": 2021}),
 ]
 
 EPISODE_NAMES = [
@@ -65,6 +72,22 @@ EPISODE_NAMES = [
      {"title": "The 100", "season": 5}),
     ("Season 10 (AMZN WEB-DL)", True, {"season": 10}),
     ("Dark - season 1.en", True, {"title": "Dark", "season": 1}),
+    # Already-clean names must parse back to themselves, or a second run churns.
+    ("Gravity Falls (2012) S01E19 Dreamscaperers (1).mp4", False,
+     {"title": "Gravity Falls", "year": 2012, "season": 1, "episode": 19,
+      "episode_title": "Dreamscaperers (1)"}),
+    ("The 100 (2014) S02E15 Blood Must Have Blood (1).mkv", False,
+     {"title": "The 100", "season": 2, "episode": 15, "episode_title": "Blood Must Have Blood (1)"}),
+    # An episode title may contain a year.
+    ("Modern Family (2009) S01E22 Airport 2010.mkv", False,
+     {"title": "Modern Family", "season": 1, "episode": 22, "episode_title": "Airport 2010"}),
+    # "red", "sky", "max" and "stan" are streaming tags and also ordinary words.
+    ("The 100 (2014) S03E14 Red Sky at Morning.mkv", False,
+     {"title": "The 100", "season": 3, "episode": 14, "episode_title": "Red Sky at Morning"}),
+    ("Modern Family (2009) S10E16 Red Alert.mkv", False,
+     {"title": "Modern Family", "season": 10, "episode": 16, "episode_title": "Red Alert"}),
+    ("The 100 (2014) S05E02 Red Queen.mkv", False,
+     {"title": "The 100", "season": 5, "episode": 2, "episode_title": "Red Queen"}),
 ]
 
 SUBTITLE_NAMES = [

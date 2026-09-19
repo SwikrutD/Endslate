@@ -85,12 +85,15 @@ def _apply(args) -> int:
 
     run_id = _dt.datetime.now().strftime("%Y-%m-%d_%H%M%S")
     result = execute(plan, run_id)
-    print(f"moved {result.moved}, quarantined {result.quarantined}, "
-          f"folders created {result.folders_created}, removed {result.folders_removed}")
+    print(result.summary())
     if result.journal_path:
         print(f"journal: {result.journal_path}")
-    for failure in result.failures:
-        print(f"  ! {failure.path}: {failure.message}", file=sys.stderr)
+    if result.failures:
+        print(f"\n{len(result.failures)} files did not move:", file=sys.stderr)
+        for failure in result.failures:
+            print(f"  ! {failure.path}: {failure.message}", file=sys.stderr)
+        if result.report_path:
+            print(f"written to {result.report_path}", file=sys.stderr)
     return 0 if result.ok else 5
 
 

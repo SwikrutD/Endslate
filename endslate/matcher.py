@@ -177,6 +177,12 @@ class TmdbMatcher:
     # ---------------------------------------------------------------- scoring
 
     def _score(self, guess_title: str, guess_year: Optional[int], candidate: Candidate) -> float:
+        """Title similarity plus a year bonus, deliberately uncapped.
+
+        Capping at 1.0 threw the year away exactly when it mattered: two films
+        called The Witch, one from 2015 and one from 2016, both scored 1.0, so
+        the wrong year could sort first and the item fell into Needs you.
+        """
         score = similarity(guess_title, candidate.title)
         if guess_year and candidate.year:
             if guess_year == candidate.year:
@@ -185,12 +191,15 @@ class TmdbMatcher:
                 score += 0.05
             else:
                 score -= 0.20
-        return round(min(score, 1.0), 4)
+        return round(score, 4)
 
     def _decide(self, item: Item, candidates: list[Candidate], guess_title: str, guess_year: Optional[int]):
         for candidate in candidates:
             candidate.score = self._score(guess_title, guess_year, candidate)
-        candidates.sort(key=lambda c: c.score, reverse=True)
+        candidates.sort(
+            key=lambda c: (bool(guess_year and c.year == guess_year), c.score),
+            reverse=True,
+        )
         item.candidates = candidates[:8]
         if not candidates:
             item.confidence = Confidence.LOW

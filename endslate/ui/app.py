@@ -715,7 +715,12 @@ class MainWindow(QMainWindow):
 
     def _apply_done(self, result) -> None:
         self._busy(False, "")
-        lines = [
+        lines = []
+        if result.failures:
+            lines.append(f"{len(result.failures)} FILES DID NOT MOVE")
+            lines += [f"  ! {failure.path}: {failure.message}" for failure in result.failures]
+            lines.append("")
+        lines += [
             f"moved {result.moved} files",
             f"quarantined {result.quarantined}",
             f"created {result.folders_created} folders",
@@ -723,14 +728,28 @@ class MainWindow(QMainWindow):
             f"{result.bytes_moved / 1_000_000_000:.1f} GB touched",
             f"journal: {result.journal_path}",
         ]
-        for failure in result.failures:
-            lines.append(f"! {failure.path}: {failure.message}")
+        if result.report_path:
+            lines.append(f"problems: {result.report_path}")
         self.apply_log.setPlainText("\n".join(lines))
         self.scan_result = None
         self.plan = None
         self.apply_button.setEnabled(False)
-        self.apply_summary.setText("Run finished. Scan again to see the library as it stands now.")
-        QMessageBox.information(self, "Done", f"Moved {result.moved} files. {len(result.failures)} problems.")
+
+        if result.failures:
+            self.apply_summary.setText(
+                f"<b style='color:#b00'>{len(result.failures)} files did not move.</b> "
+                "The list is below and in the problems file. Everything else went through."
+            )
+            detail = "\n".join(f"{f.path}\n    {f.message}" for f in result.failures[:15])
+            if len(result.failures) > 15:
+                detail += f"\n\n...and {len(result.failures) - 15} more."
+            box = QMessageBox(QMessageBox.Warning, "Some files did not move",
+                              f"Moved {result.moved} files, but {len(result.failures)} did not.", parent=self)
+            box.setDetailedText(detail)
+            box.exec()
+        else:
+            self.apply_summary.setText("Run finished with no problems. Scan again to see the library as it stands now.")
+            QMessageBox.information(self, "Done", f"Moved {result.moved} files with no problems.")
 
     def start_undo(self) -> None:
         rows = self.history_table.selectionModel().selectedRows()

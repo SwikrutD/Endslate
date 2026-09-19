@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, Optional
 
-from endslate import junk
+from endslate import fsops, junk
 from endslate.models import FileKind, ScannedFile
 
 QUARANTINE_DIRNAME = "_Quarantine"
@@ -52,7 +52,8 @@ def _is_under(path: Path, directory: Path) -> bool:
 
 def _match_root(root: Path, names: Iterable[str]) -> Optional[Path]:
     try:
-        entries = [p for p in root.iterdir() if p.is_dir()]
+        entries = [root / name for name in fsops.listdir(root)]
+        entries = [p for p in entries if fsops.is_dir(p)]
     except OSError:
         return None
     for entry in entries:
@@ -66,8 +67,7 @@ def scan(root: Path) -> LibraryScan:
     root = Path(root)
     result = LibraryScan(root=root)
 
-    for dirpath, dirnames, filenames in os.walk(root, onerror=lambda e: result.errors.append(str(e))):
-        here = Path(dirpath)
+    for here, dirnames, filenames in fsops.walk_with_errors(root, result.errors.append):
         if QUARANTINE_DIRNAME in here.parts:
             dirnames[:] = []
             continue
@@ -81,7 +81,7 @@ def scan(root: Path) -> LibraryScan:
         for filename in filenames:
             path = here / filename
             try:
-                size = path.stat().st_size
+                size = fsops.size(path)
             except OSError as exc:
                 result.errors.append(f"{path}: {exc}")
                 size = 0
