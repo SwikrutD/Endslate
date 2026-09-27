@@ -143,6 +143,11 @@ class PlanFilterProxy(QSortFilterProxyModel):
         self.needle = ""
 
     def set_needle(self, text: str) -> None:
+        if hasattr(self, "beginFilterChange"):  # Qt 6.10 and later
+            self.beginFilterChange()
+            self.needle = text.strip().lower()
+            self.endFilterChange(QSortFilterProxyModel.Direction.Rows)
+            return
         self.needle = text.strip().lower()
         if hasattr(self, "invalidateRowsFilter"):
             self.invalidateRowsFilter()

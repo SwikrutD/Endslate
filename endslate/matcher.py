@@ -36,6 +36,25 @@ def similarity(a: str, b: str) -> float:
     return difflib.SequenceMatcher(None, normalize_title(a), normalize_title(b)).ratio()
 
 
+def literal_title(title: str) -> str:
+    """Like normalize_title, but keeps a leading article.
+
+    Dropping "The" is right for scoring and wrong for telling Dark from The Dark,
+    which both normalise to "dark" and so tied at 1.00.
+    """
+    out = title.lower().replace("&", "and")
+    return re.sub(r"[^a-z0-9]+", " ", out).strip()
+
+
+_SUBTITLE_RE = re.compile(r"\s+-\s+|\s*:\s+")
+
+
+def main_title(title: str) -> str:
+    """The part before a subtitle: Dune - Part One -> Dune."""
+    head = _SUBTITLE_RE.split(title, maxsplit=1)[0].strip()
+    return head if len(normalize_title(head)) >= 3 else title
+
+
 class RateLimiter:
     def __init__(self, limit: int = RATE_LIMIT, window: float = RATE_WINDOW):
         self.limit = limit
@@ -200,6 +219,13 @@ class TmdbMatcher:
         the wrong year could sort first and the item fell into Needs you.
         """
         score = similarity(guess_title, candidate.title)
+        if guess_year and candidate.year == guess_year:
+            # TMDB calls it Dune, the release calls it Dune - Part One. Only
+            # trusted when the year agrees, since without it every sequel's
+            # subtitle would collapse onto the first film.
+            head = main_title(guess_title)
+            if head != guess_title:
+                score = max(score, similarity(head, candidate.title) - 0.05)
         if guess_year and candidate.year:
             if guess_year == candidate.year:
                 score += 0.15
@@ -213,7 +239,11 @@ class TmdbMatcher:
         for candidate in candidates:
             candidate.score = self._score(guess_title, guess_year, candidate)
         candidates.sort(
-            key=lambda c: (bool(guess_year and c.year == guess_year), c.score),
+            key=lambda c: (
+                bool(guess_year and c.year == guess_year),
+                c.score,
+                literal_title(c.title) == literal_title(guess_title),
+            ),
             reverse=True,
         )
         item.candidates = candidates[:8]
@@ -225,6 +255,15 @@ class TmdbMatcher:
         exact = normalize_title(best.title) == normalize_title(guess_title)
         runner_up = candidates[1].score if len(candidates) > 1 else 0.0
         clear = best.score - runner_up >= 0.10 or len(candidates) == 1
+        if not clear and exact:
+            # Two titles that tie once the article is dropped (Dark, The Dark)
+            # are told apart by the one that matches letter for letter, as long
+            # as it is the only one that does.
+            literal = literal_title(guess_title)
+            same = [c for c in candidates if literal_title(c.title) == literal]
+            if guess_year:
+                same = [c for c in same if c.year == guess_year] or same
+            clear = len(same) == 1 and same[0] is best
 
         if exact and guess_year and best.year == guess_year:
             item.confidence = Confidence.HIGH

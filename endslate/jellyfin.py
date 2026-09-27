@@ -7,6 +7,7 @@ the number that actually says whether the work succeeded.
 """
 from __future__ import annotations
 
+import os
 import socket
 from dataclasses import dataclass, field
 from typing import Optional
@@ -16,6 +17,12 @@ TIMEOUT = 8.0
 PORT_TIMEOUT = 1.0
 PROCESS_NAMES = ("jellyfin", "jellyfin.exe", "jellyfin-server", "jellyfin-server.exe")
 ID_KEYS = ("Tmdb", "Imdb", "Tvdb", "TmdbCollection", "Zap2It")
+TOP_LEVEL_TYPES = ("Movie", "Series")
+STALE_HINT = (
+    "Jellyfin failing to drop an item it has lost is usually its own database refusing "
+    "the delete. Look in its log for 'UNIQUE constraint failed: UserData'. See the README, "
+    "under Jellyfin still shows the old names."
+)
 
 
 # --------------------------------------------------------------- is it running
@@ -67,6 +74,8 @@ class LibraryReport:
     total: int = 0
     identified: int = 0
     unidentified: list[dict] = field(default_factory=list)
+    stale: list[dict] = field(default_factory=list)
+    stale_checked: bool = False
     error: str = ""
 
     @property
@@ -77,17 +86,46 @@ class LibraryReport:
     def unidentified_count(self) -> int:
         return len(self.unidentified)
 
+    @property
+    def stale_count(self) -> int:
+        return len(self.stale)
+
     def summary(self) -> str:
         if self.error:
             return self.error
         if not self.total:
             return "Jellyfin reported no movies or shows at all. Check the library paths."
         if not self.unidentified:
-            return f"Jellyfin identified all {self.total:,} movies and shows."
-        return (
-            f"Jellyfin identified {self.identified:,} of {self.total:,}. "
-            f"{self.unidentified_count:,} still have no provider id."
-        )
+            text = f"Jellyfin identified all {self.total:,} movies and shows."
+        else:
+            text = (
+                f"Jellyfin identified {self.identified:,} of {self.total:,}. "
+                f"{self.unidentified_count:,} still have no provider id."
+            )
+        if self.stale:
+            text += (
+                f" {self.stale_count:,} of its entries point at files that no longer exist, "
+                "so a rescan has not caught up with the rename."
+            )
+        return text
+
+    def detail(self, limit: int = 200) -> str:
+        """The lists behind the summary, for a read-only text box."""
+        def rows(entries: list[dict]) -> list[str]:
+            return [
+                f"{row['type'] or 'item':7} {row['name']}\n        {row['path']}"
+                for row in entries[:limit]
+            ]
+
+        lines: list[str] = []
+        if self.stale:
+            lines.append(f"STILL AT AN OLD PATH ({self.stale_count:,})")
+            lines += rows(self.stale)
+            lines += ["", STALE_HINT, ""]
+        if self.unidentified:
+            lines.append(f"NO PROVIDER ID ({self.unidentified_count:,})")
+            lines += rows(self.unidentified)
+        return "\n".join(lines).strip()
 
 
 class JellyfinError(RuntimeError):
@@ -175,7 +213,7 @@ class JellyfinClient:
     def _items(self) -> list[dict]:
         params = {
             "recursive": "true",
-            "includeItemTypes": "Movie,Series",
+            "includeItemTypes": "Movie,Series,Episode",
             "fields": "ProviderIds,Path",
             "enableImages": "false",
             "limit": 10000,
@@ -210,7 +248,10 @@ class JellyfinClient:
             out.error = f"Could not reach {self.url}: {exc}"
             return out
 
+        _find_stale(items, out)
         for item in items:
+            if (item.get("Type") or "Movie") not in TOP_LEVEL_TYPES:
+                continue
             out.total += 1
             provider = item.get("ProviderIds") or {}
             if any(provider.get(key) for key in ID_KEYS):
@@ -224,3 +265,41 @@ class JellyfinClient:
                     }
                 )
         return out
+
+
+def _local_path(path: str) -> Optional[str]:
+    """A path worth checking from here, or None when it cannot mean anything locally."""
+    if not path or not os.path.isabs(path):
+        return None
+    anchor = os.path.splitdrive(path)[0] or os.path.sep
+    return path if os.path.exists(anchor) else None
+
+
+def _find_stale(items: list[dict], out: LibraryReport) -> None:
+    """Items whose file is gone: a rename Jellyfin has not let go of.
+
+    Only trusted when some of Jellyfin's paths do exist from here. If none do,
+    Jellyfin is on another machine or sees the library under another name, and
+    every item would look missing.
+    """
+    missing: list[dict] = []
+    present = 0
+    for item in items:
+        if (item.get("Type") or "") not in ("Movie", "Episode"):
+            continue
+        path = _local_path(item.get("Path") or "")
+        if path is None:
+            continue
+        if os.path.exists(path):
+            present += 1
+        else:
+            missing.append(
+                {
+                    "name": item.get("Name") or "(no name)",
+                    "type": item.get("Type") or "",
+                    "path": path,
+                }
+            )
+    if present:
+        out.stale_checked = True
+        out.stale = missing

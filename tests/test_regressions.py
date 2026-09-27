@@ -226,3 +226,51 @@ def test_an_unreachable_provider_falls_back_to_the_filename(tmp_path):
     assert items[0].confidence is Confidence.HIGH
     assert "unreachable" in items[0].note
     assert items[1].confidence is Confidence.LOW
+
+
+# ----------------------------------------------------- matching, from recordings
+
+
+def test_dark_is_not_confused_with_the_dark(tmp_path):
+    from tests.test_matcher import episode_item
+
+    session = FakeSession(
+        shows={
+            "Dark": [
+                {"id": 1, "name": "The Dark", "first_air_date": "2026-01-01"},
+                {"id": 70523, "name": "Dark", "first_air_date": "2017-12-01"},
+            ]
+        },
+        episodes={(70523, 1): {1: "Secrets"}},
+    )
+    matcher = TmdbMatcher("k", cache=Cache(tmp_path / "c.sqlite"), session=session)
+    item = episode_item("Dark", 1, 1)
+    matcher.match_all([item])
+    assert item.confidence is Confidence.HIGH, item.note
+    assert item.meta.tmdb_id == 70523
+    assert item.meta.episode_title == "Secrets"
+
+
+def test_a_subtitle_tmdb_drops_still_matches_when_the_year_agrees(tmp_path):
+    session = FakeSession(
+        movies={"Dune - Part One": [{"id": 438631, "title": "Dune", "release_date": "2021-09-15"}]}
+    )
+    matcher = TmdbMatcher("k", cache=Cache(tmp_path / "c.sqlite"), session=session)
+    item = movie_item("Dune - Part One", 2021)
+    matcher.match_all([item])
+    assert item.confidence in (Confidence.HIGH, Confidence.MEDIUM), item.note
+    assert item.meta.tmdb_id == 438631
+
+
+def test_a_subtitle_is_not_dropped_when_the_year_disagrees(tmp_path):
+    session = FakeSession(
+        movies={
+            "Mission Impossible - Dead Reckoning": [
+                {"id": 954, "title": "Mission: Impossible", "release_date": "1996-05-22"}
+            ]
+        }
+    )
+    matcher = TmdbMatcher("k", cache=Cache(tmp_path / "c.sqlite"), session=session)
+    item = movie_item("Mission Impossible - Dead Reckoning", 2023)
+    matcher.match_all([item])
+    assert item.confidence is Confidence.LOW

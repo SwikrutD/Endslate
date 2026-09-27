@@ -17,7 +17,7 @@ def targets(plan, bucket=None):
             continue
         for op in entry.ops:
             if op.kind in (OpKind.MOVE, OpKind.QUARANTINE) and op.dst is not None:
-                out.add(str(op.dst.relative_to(plan.root)))
+                out.add(op.dst.relative_to(plan.root).as_posix())
     return out
 
 

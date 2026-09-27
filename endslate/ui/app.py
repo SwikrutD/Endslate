@@ -40,7 +40,7 @@ from endslate.ui.pages.review import ReviewPage
 from endslate.ui.pages.settings import SettingsPage
 from endslate.ui.resolver import Resolver
 from endslate.ui.theme import RAIL_WIDTH, SPACE
-from endslate.ui.widgets import Toast, label, restyle_tree
+from endslate.ui.widgets import Clapstick, Toast, label, restyle_tree
 from endslate.ui.workers import ApplyJob, HealthJob, PlanJob, ProbeJob, ScanJob, UndoJob
 
 NAV = [
@@ -63,42 +63,38 @@ class Rail(QFrame):
         self.setObjectName("Rail")
         self.setFixedWidth(RAIL_WIDTH)
 
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(SPACE["md"], SPACE["xl"], SPACE["md"], SPACE["lg"])
-        layout.setSpacing(SPACE["xs"])
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+        outer.addWidget(Clapstick())
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, SPACE["xl"], 0, SPACE["lg"])
+        layout.setSpacing(2)
+        outer.addLayout(layout, 1)
 
-        brand = QHBoxLayout()
-        brand.setSpacing(SPACE["sm"])
-        self.mark = QLabel()
-        self.mark.setFixedSize(30, 30)
-        icon_file = ASSETS / "endslate.png"
-        if icon_file.exists():
-            from PySide6.QtGui import QPixmap
-
-            self.mark.setPixmap(
-                QPixmap(str(icon_file)).scaled(30, 30, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-            )
-        brand.addWidget(self.mark)
-        names = QVBoxLayout()
-        names.setSpacing(0)
+        # A wordmark, not a logo: the clapstick above already is the mark.
+        brand = QVBoxLayout()
+        brand.setContentsMargins(SPACE["lg"], 0, SPACE["lg"], 0)
+        brand.setSpacing(0)
         title = QLabel("Endslate")
         title.setObjectName("RailBrand")
         theme.apply_role_font(title, "title")
-        version = QLabel(f"v{__version__}")
+        version = QLabel(f"MEDIA RENAMER  ·  v{__version__}")
         version.setObjectName("RailTag")
-        theme.apply_role_font(version, "caption")
-        names.addWidget(title)
-        names.addWidget(version)
-        brand.addLayout(names)
-        brand.addStretch(1)
+        version.setFont(theme.mono_font(theme.SIZE_MICRO))
+        brand.addWidget(title)
+        brand.addWidget(version)
         layout.addLayout(brand)
-        layout.addSpacing(SPACE["xl"])
+        layout.addSpacing(SPACE["2xl"])
 
         self.buttons: dict[str, QPushButton] = {}
         for index, (title_text, key) in enumerate(NAV):
             item = QPushButton(f"  {title_text}")
             item.setProperty("nav", "true")
             item.setCursor(Qt.PointingHandCursor)
+            # Reachable by Tab, but a click does not leave a focus mark behind
+            # beside the current-page marker.
+            item.setFocusPolicy(Qt.TabFocus)
             item.setIconSize(QSize(18, 18))
             item.setShortcut(QKeySequence(f"Ctrl+{index + 1}"))
             item.setToolTip(f"{title_text}  (Ctrl+{index + 1})")
@@ -107,12 +103,21 @@ class Rail(QFrame):
             self.buttons[key] = item
 
         layout.addStretch(1)
+        foot = QVBoxLayout()
+        foot.setContentsMargins(SPACE["lg"], 0, SPACE["lg"], 0)
+        foot.setSpacing(3)
+        self.foot_label = QLabel("LIBRARY")
+        self.foot_label.setObjectName("RailFootLabel")
+        self.foot_label.setVisible(False)
         self.foot = QLabel("")
         self.foot.setObjectName("RailFoot")
+        self.foot.setFont(theme.mono_font(theme.SIZE_MICRO))
         self.foot.setWordWrap(False)
         self.foot.setMinimumWidth(0)
         self._foot_text = ""
-        layout.addWidget(self.foot)
+        foot.addWidget(self.foot_label)
+        foot.addWidget(self.foot)
+        layout.addLayout(foot)
 
     def select(self, key: str) -> None:
         for item_key, item in self.buttons.items():
@@ -125,6 +130,7 @@ class Rail(QFrame):
         from endslate.ui.widgets import elide
 
         self._foot_text = text
+        self.foot_label.setVisible(bool(text))
         elide(self.foot, text, Qt.ElideLeft)
 
     def resizeEvent(self, event):  # noqa: N802
@@ -623,12 +629,13 @@ class MainWindow(QMainWindow):
         if not report.ok:
             self.apply_page.show_jellyfin(report.summary(), "red", "warning")
             return
-        detail = "\n".join(
-            f"{row['type'] or 'item':7} {row['name']}\n        {row['path']}"
-            for row in report.unidentified[:200]
-        )
-        tone, glyph = ("green", "check") if not report.unidentified else ("amber", "warning")
-        self.apply_page.show_jellyfin(report.summary(), tone, glyph, detail)
+        if report.stale:
+            tone, glyph = "red", "warning"
+        elif report.unidentified:
+            tone, glyph = "amber", "warning"
+        else:
+            tone, glyph = "green", "check"
+        self.apply_page.show_jellyfin(report.summary(), tone, glyph, report.detail())
         self.toast(report.summary(), glyph, tone)
 
     # --------------------------------------------------------------- history

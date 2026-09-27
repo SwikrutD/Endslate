@@ -73,7 +73,7 @@ class PlanRowDelegate(QStyledItemDelegate):
             rect.right(), rect.bottom(),
         )
 
-        # selection accent on the left edge
+        # selection accent on the left edge, in chalk, since colour is taken
         if selected:
             painter.fillRect(QRect(rect.left(), rect.top(), 2, rect.height()), QColor(palette.accent))
 
@@ -83,16 +83,17 @@ class PlanRowDelegate(QStyledItemDelegate):
             checked = entry.selected
             painter.setPen(QPen(QColor(palette.accent if checked else palette.line_strong), 1))
             painter.setBrush(QColor(palette.accent) if checked else Qt.NoBrush)
-            painter.drawRoundedRect(box, 5, 5)
+            painter.drawRoundedRect(box, 3, 3)
             if checked:
                 painter.drawPixmap(box.left() + 2, box.top() + 2, icons.pixmap("check", palette.on_accent, 13))
             painter.setBrush(Qt.NoBrush)
 
-        # tone dot, pulled left when there is no checkbox to sit beside
+        # tone mark: a short upright bar, like a clip colour in an edit
+        # timeline, pulled left when there is no checkbox to sit beside
         dot_x = DOT_X if self.model.selectable else CHECK_X + 4
         painter.setPen(Qt.NoPen)
         painter.setBrush(QColor(strong))
-        painter.drawEllipse(rect.left() + dot_x, rect.center().y() - 4, 8, 8)
+        painter.drawRoundedRect(QRect(rect.left() + dot_x + 2, rect.top() + 14, 3, rect.height() - 28), 1.5, 1.5)
         painter.setBrush(Qt.NoBrush)
 
         # ------------------------------------------------------------- text
@@ -109,8 +110,7 @@ class PlanRowDelegate(QStyledItemDelegate):
 
         size_text = human_size(self.model.size_of(entry))
         extra = self.model.extra_moves(entry)
-        meta_font = QFont(painter.font())
-        meta_font.setPointSize(theme.SIZE_CAPTION)
+        meta_font = theme.mono_font(theme.SIZE_CAPTION)
         meta_metrics = QFontMetrics(meta_font)
 
         meta_width = 0
@@ -139,8 +139,9 @@ class PlanRowDelegate(QStyledItemDelegate):
             title_metrics.elidedText(primary, Qt.ElideMiddle, available),
         )
 
-        mono = QFont(theme.FONT_MONO.split(",")[0].strip('"'))
-        mono.setPointSize(theme.SIZE_CAPTION)
+        # Families with fallbacks: asking for Cascadia Mono alone, on a machine
+        # without it, got an arbitrary condensed face instead of Consolas.
+        mono = theme.mono_font(theme.SIZE_CAPTION)
         painter.setFont(mono)
         mono_metrics = QFontMetrics(mono)
         glyph_y = rect.top() + 36
@@ -169,7 +170,7 @@ class PlanRowDelegate(QStyledItemDelegate):
             badge = QRect(cursor - width, rect.center().y() - 10, width, 20)
             painter.setPen(Qt.NoPen)
             painter.setBrush(QColor(palette.surface_hi))
-            painter.drawRoundedRect(badge, 10, 10)
+            painter.drawRoundedRect(badge, RADIUS_SM, RADIUS_SM)
             painter.setBrush(Qt.NoBrush)
             painter.setPen(QColor(palette.text_dim))
             painter.drawText(badge, Qt.AlignCenter, badge_text)

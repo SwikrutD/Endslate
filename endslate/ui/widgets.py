@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Callable, Optional
 
 from PySide6.QtCore import QEvent, QPropertyAnimation, QSize, Qt, Signal
-from PySide6.QtGui import QColor, QFont
+from PySide6.QtGui import QColor, QFont, QPixmap
 from PySide6.QtWidgets import (
     QCheckBox,
     QFrame,
@@ -54,13 +54,24 @@ def button(text: str, variant: str = "default", icon_name: str = "", on_click=No
     out.setProperty("variant", variant)
     out.setCursor(Qt.PointingHandCursor)
     if icon_name:
-        palette = theme.active()
-        colour = palette.on_accent if variant == "primary" else palette.text_dim
-        out.setIcon(icons.icon(icon_name, colour, 17))
+        out.setProperty("iconName", icon_name)
+        tint_button(out)
         out.setIconSize(QSize(17, 17))
     if on_click is not None:
         out.clicked.connect(on_click)
     return out
+
+
+def tint_button(widget: QPushButton) -> None:
+    """Colour a button's icon for its variant. Rerun on every theme change, since
+    the primary button swaps chalk for ink and a stale icon would vanish into it."""
+    name = widget.property("iconName")
+    if not name:
+        return
+    palette = theme.active()
+    variant = widget.property("variant")
+    colour = palette.on_accent if variant == "primary" else palette.text_dim
+    widget.setIcon(icons.icon(name, colour, 17))
 
 
 class ClickableCard(QFrame):
@@ -159,6 +170,51 @@ class Card(QFrame):
         self.body.addLayout(layout)
 
 
+class Clapstick(QWidget):
+    """The striped bar off the top of a clapperboard. The app's one ornament.
+
+    Painted rather than styled: a QSS gradient is sized to the widget, so its
+    stripes would change angle with the width. These are 45 degrees everywhere.
+    """
+
+    def __init__(self, height: int = theme.STRIPE_HEIGHT, period: int = 18,
+                 rounded: bool = False, parent=None):
+        super().__init__(parent)
+        self.setFixedHeight(height)
+        self.period = period
+        self.rounded = rounded
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
+    def restyle(self) -> None:
+        self.update()
+
+    def paintEvent(self, event):  # noqa: N802
+        from PySide6.QtCore import QPointF, QRectF
+        from PySide6.QtGui import QPainter, QPainterPath, QPolygonF
+
+        palette = theme.active()
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing, True)
+        rect = QRectF(self.rect())
+        if self.rounded:
+            clip = QPainterPath()
+            clip.addRoundedRect(rect.adjusted(0, 0, 0, RADIUS_LG), RADIUS_LG, RADIUS_LG)
+            painter.setClipPath(clip)
+        painter.fillRect(rect, QColor(palette.rail if theme.active_mode() == "dark" else palette.text))
+        ink = QColor(palette.text if theme.active_mode() == "dark" else palette.surface)
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(ink)
+        h = rect.height()
+        half = self.period / 2
+        x = -h
+        while x < rect.width() + h:
+            painter.drawPolygon(QPolygonF([
+                QPointF(x, h), QPointF(x + h, 0), QPointF(x + h + half, 0), QPointF(x + half, h),
+            ]))
+            x += self.period
+        painter.end()
+
+
 class Divider(QFrame):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -176,10 +232,10 @@ class Pill(QLabel):
         self.set_tone(tone)
 
     def set_tone(self, tone: str) -> None:
-        strong, soft, text = tone_colours(theme.active(), tone)
+        _strong, soft, text = tone_colours(theme.active(), tone)
         self.setStyleSheet(
-            f"background: {soft}; color: {text}; border: 1px solid {strong};"
-            f"border-radius: 9px; padding: 2px 9px; font-weight: 600;"
+            f"background: {soft}; color: {text}; border: none;"
+            f"border-radius: {RADIUS_SM}px; padding: 2px 8px; font-weight: 600;"
         )
 
 
@@ -225,21 +281,29 @@ class StatTile(ClickableCard):
         palette = theme.active()
         strong, _soft, _text = tone_colours(palette, self.tone)
         selected = self.isChecked()
-        background = palette.surface_alt if (selected or self._hover) else palette.surface
-        border = strong if selected else (palette.line_strong if self._hover else palette.line)
+        background = palette.surface_hi if selected else (palette.surface_alt if self._hover else palette.surface)
+        border = palette.line_strong if (selected or self._hover) else palette.line
+        # The chosen filter is underlined in its own colour, the way a take is
+        # circled on a camera report.
+        underline = strong if selected else border
+        self.setObjectName("StatTile")
         self.setStyleSheet(
-            f"QFrame {{ background: {background}; border: 1px solid {border};"
-            f" border-radius: {RADIUS_MD}px; }}"
+            f"#StatTile {{ background: {background}; border: 1px solid {border};"
+            f" border-bottom: 3px solid {underline}; border-radius: {RADIUS_MD}px; }}"
         )
-        self.dot.setStyleSheet(f"background: {strong}; border-radius: 4px; border: none;")
+        self.dot.setStyleSheet(f"background: {strong}; border-radius: 1px; border: none;")
         theme.apply_role_font(self.caption, "caption")
         self.caption.setStyleSheet(
             f"color: {palette.text if selected else palette.text_dim};"
             " font-weight: 600; background: transparent; border: none;"
         )
         theme.apply_role_font(self.value, "metric")
+        # The family has to be in the rule as well: the app-wide QWidget rule
+        # names the UI face and would win over setFont.
+        self.value.setFont(theme.mono_font(theme.SIZE_TITLE))
         self.value.setStyleSheet(
             f"color: {palette.text if selected else palette.text_dim};"
+            f" font-family: {theme.FONT_MONO}; font-size: {theme.SIZE_TITLE}pt;"
             " background: transparent; border: none;"
         )
 
@@ -338,10 +402,15 @@ class PresetCard(ClickableCard):
     def restyle(self) -> None:
         palette = theme.active()
         selected = self.isChecked()
-        border = palette.accent if (selected or self._hover) else palette.line
+        if selected:
+            border, background = palette.accent, palette.surface_alt
+        else:
+            border = palette.line_strong if self._hover else palette.line
+            background = palette.surface
+        self.setObjectName("PresetCard")
         self.setStyleSheet(
-            f"QFrame {{ background: {palette.accent_soft if selected else palette.surface};"
-            f" border: 1px solid {border}; border-radius: {RADIUS_MD}px; }}"
+            f"#PresetCard {{ background: {background};"
+            f" border: 1px solid {border}; border-radius: {RADIUS_LG}px; }}"
             " QLabel { background: transparent; border: none; }"
         )
         theme.apply_role_font(self.title, "subtitle")
@@ -350,9 +419,9 @@ class PresetCard(ClickableCard):
         self.description.setStyleSheet(f"color: {palette.text_dim};")
         for line in self.examples:
             theme.apply_role_font(line, "mono")
-            line.setStyleSheet(f"color: {palette.accent_text if selected else palette.text_faint};")
+            line.setStyleSheet(f"color: {palette.text if selected else palette.text_faint};")
         self.mark.setPixmap(
-            icons.pixmap("check", palette.accent, 16) if selected else icons.pixmap("dot", palette.line, 16)
+            icons.pixmap("check", palette.accent, 16) if selected else QPixmap()
         )
 
 
@@ -418,13 +487,16 @@ class Banner(QFrame):
         self.action.setVisible(True)
 
     def restyle(self) -> None:
+        # Selected by name: a bare QFrame rule would also hit the QLabel inside,
+        # since QLabel is a QFrame, and draw a second box around the text.
         strong, soft, text_colour = tone_colours(theme.active(), self.tone)
+        self.setObjectName("Banner")
         self.setStyleSheet(
-            f"QFrame {{ background: {soft}; border: 1px solid {strong};"
-            f"border-radius: {RADIUS_MD}px; }}"
+            f"#Banner {{ background: {soft}; border: none; border-left: 3px solid {strong};"
+            f" border-radius: {RADIUS_SM}px; }}"
         )
         self.glyph.setPixmap(icons.pixmap(self.icon_name, strong, 18))
-        self.text.setStyleSheet(f"color: {text_colour};")
+        self.text.setStyleSheet(f"color: {text_colour}; background: transparent; border: none;")
 
 
 class EmptyState(QWidget):
@@ -523,12 +595,13 @@ class Toast(QFrame):
 
         palette = theme.active()
         strong, _soft, _text = tone_colours(palette, tone)
+        self.setObjectName("Toast")
         self.setStyleSheet(
-            f"QFrame {{ background: {palette.surface_hi}; border: 1px solid {palette.line_strong};"
-            f"border-radius: {RADIUS_SM}px; }}"
+            f"#Toast {{ background: {palette.surface_hi}; border: 1px solid {palette.line_strong};"
+            f" border-left: 3px solid {strong}; border-radius: {RADIUS_SM}px; }}"
         )
         self.glyph.setPixmap(icons.pixmap(icon_name, strong, 16))
-        self.text.setStyleSheet(f"color: {palette.text};")
+        self.text.setStyleSheet(f"color: {palette.text}; background: transparent; border: none;")
         self.text.setText(text)
         self.adjustSize()
         self._place()
@@ -566,6 +639,8 @@ class Toast(QFrame):
 
 def restyle_tree(widget: QWidget) -> None:
     """Ask every themed component in a tree to recolour itself."""
+    for child in widget.findChildren(QPushButton):
+        tint_button(child)
     for child in widget.findChildren(QWidget):
         restyle = getattr(child, "restyle", None)
         if callable(restyle):

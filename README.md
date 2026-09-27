@@ -75,7 +75,7 @@ listening on the Jellyfin port and warns you, but the check is a courtesy, not a
 
 | Key | Does |
 | --- | --- |
-| `Ctrl` `1` to `5` | Jump to Library, Review, Apply, History, Settings |
+| `Ctrl` `1` to `6` | Jump to Library, Review, Apply, Health, History, Settings |
 | `Ctrl` `R` or `F5` | Scan the library again |
 | `Ctrl` `F` | Jump to the search field |
 | `Space` | Include or exclude the selected rows |
@@ -84,10 +84,13 @@ listening on the Jellyfin port and warns you, but the check is a courtesy, not a
 
 Right-click any row to open its folder in Explorer, copy either path, or exclude it.
 
+The theme follows Windows by default and can be pinned to dark or light in Settings. Both
+are chalk on slate: every control is a neutral, and colour only ever marks a file's state.
+Green will move, amber needs you, red collides, violet goes to quarantine.
+
 ## It remembers what you tell it
 
-Resolving a title by hand used to last until you closed the window. Now every
-resolution is written to `%LOCALAPPDATA%\Endslate\decisions.json`, twice: against the
+Every title you resolve by hand is written to `%LOCALAPPDATA%\Endslate\decisions.json`, twice: against the
 file you made it on, and against the title you made it for. The second one is what
 matters. It survives the file being renamed and it generalises, so
 `INDIANA JONES RAIDERS LOST ARK` stays solved no matter what the file is called
@@ -104,9 +107,45 @@ Endslate can:
 
 - tell Jellyfin to rescan when a run finishes, automatically or on the button
 - ask which movies and shows it still has no provider id for, and list them
+- list every entry it still holds at a path that no longer exists on disk
 
-That list is the honest score for a run. If something renamed cleanly and Jellyfin still
-cannot place it, the name is not the problem.
+The first list is the honest score for a run. If something renamed cleanly and Jellyfin
+still cannot place it, the name is not the problem. The second list means Jellyfin has not
+caught up with the rename at all, which is the next section. It is only checked when
+Endslate can see the same paths Jellyfin does, so a server on another machine skips it.
+
+### Jellyfin still shows the old names
+
+The symptom: after a run and any number of rescans, Jellyfin still lists films under their
+old folder names, playing one fails with `Error opening input: No such file or directory`,
+and the renamed copies never appear. Deleting and re-adding the library does not help.
+
+The cause, as seen in Jellyfin 10.11.6: when a scan finds that a file has gone, Jellyfin
+deletes the old entry and parks its watch history on a placeholder item, so it can be
+reattached if the film comes back. If the placeholder already holds history under the same
+key, from an earlier delete of the same film, the database refuses:
+
+```
+UNIQUE constraint failed: UserData.ItemId, UserData.UserId, UserData.CustomDataKey
+```
+
+The delete fails, the rest of that folder's scan is abandoned with it, the stale entry
+stays and the new one is never added. A film renamed in more than one run, or a watched
+duplicate removed later, is exactly how a key gets reused. Search for the message in
+`C:\ProgramData\Jellyfin\Server\log\log_<date>.log` to confirm it.
+
+Endslate does not touch Jellyfin's database. What helps:
+
+1. Check Jellyfin's release notes for a newer build that fixes it, and update
+2. Otherwise stop Jellyfin, copy `C:\ProgramData\Jellyfin\Server\data\jellyfin.db`
+   somewhere safe, and clear the parked history so the deletes can go through. This loses
+   the watch history of items no longer in the library, and nothing else:
+   ```sql
+   DELETE FROM UserData WHERE ItemId = '00000000-0000-0000-0000-000000000001';
+   ```
+   Start Jellyfin and scan the library
+3. Next time, stop Jellyfin or turn off real-time monitoring for the library while
+   applying, so it sees one finished rename rather than every step of it
 
 ## Health
 
@@ -136,7 +175,6 @@ nothing is deleted and the run is still reversible.
 Two different cuts of the same film are not duplicates: Endslate tells them apart by
 edition, part, resolution or source and names them `Housefull 5 (2025) - A.mkv` and
 `- B.mkv`. It reads those markers back on the next scan, so a second run leaves them alone.
-The theme follows Windows by default and can be pinned to dark or light in Settings.
 
 ## Presets
 
@@ -176,8 +214,8 @@ log and written to `<run id>-problems.txt` beside the journal.
 
 ## Junk
 
-Swept to `M:\Media\_Quarantine\<run timestamp>\` with the original relative path kept
-underneath. `_Quarantine` is excluded from every scan.
+Swept to `<library root>\_Quarantine\<run timestamp>\` with the original relative path
+kept underneath. `_Quarantine` is excluded from every scan.
 
 macOS `._` resource forks and `.DS_Store`, `Thumbs.db` and `desktop.ini`, release-site
 adverts (`www.YTS.MX.jpg`, `YIFYStatus.com.txt` and friends), web assets, folders holding
@@ -223,6 +261,11 @@ against the real library without risk.
 | `journal.py` | Append-only JSONL record of every operation |
 | `sanitize.py` | Make any title legal on Windows without mangling it |
 | `fsops.py` | Filesystem calls that cope with long paths and case-only renames |
+| `cache.py` | SQLite cache of TMDB answers, so a rescan costs nothing |
+| `langs.py` | Language names and codes to ISO 639-1 |
+| `report.py` | The problems file written beside a run's journal |
+| `jellyfin.py` | Ask Jellyfin to rescan, what it identified, and what it lost track of |
+| `cli.py` | The command line |
 | `ui/theme.py` | The design system: colour, type and spacing tokens, and the stylesheet |
 | `ui/icons.py` | A stroke icon set drawn as SVG and tinted to the theme |
 | `ui/widgets.py` | Cards, tiles, pills, toggles, banners, empty states, toasts |
@@ -253,6 +296,7 @@ python scripts/record_tmdb.py
 That saves real search results and season listings to `tests/fixtures/tmdb/responses.json`
 and `tests/test_tmdb_live_fixtures.py` replays them offline from then on. Only response
 bodies are stored, never the key, and the recorder refuses to write if it finds the key in
-the payload anyway. Those tests skip themselves until the file exists. The executor is tested against a
-generated tree that reproduces every folder shape found in a real library, and the
+the payload anyway. Those tests skip themselves until the file exists.
+
+The executor is tested against a generated tree that reproduces every folder shape found in a real library, and the
 apply-then-undo round trip asserts the tree comes back byte-identical.

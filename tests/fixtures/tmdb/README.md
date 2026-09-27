@@ -7,8 +7,8 @@ Only response bodies are stored. The API key lives in the request URL and never
 reaches this folder, and the recorder refuses to write if it finds the key in the
 payload anyway.
 
-The file is absent until someone with network access to TMDB records it, and the
-tests that use it skip themselves when it is missing. Re-record whenever a
-matcher change needs proving against real data:
+It is committed, so the replay tests run everywhere. They skip themselves if the
+file is ever missing. Re-record whenever a matcher change needs proving against
+real data:
 
     python scripts/record_tmdb.py

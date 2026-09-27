@@ -119,3 +119,42 @@ def test_the_key_travels_in_the_header_as_well_as_the_query():
     headers = jf._headers()
     assert headers["X-Emby-Token"] == "good"
     assert 'MediaBrowser Token="good"' == headers["Authorization"]
+
+
+def test_entries_whose_file_is_gone_are_reported_as_stale(tmp_path):
+    here = tmp_path / "Movies" / "Nerve (2016)" / "Nerve (2016).mp4"
+    here.parent.mkdir(parents=True)
+    here.write_bytes(b"x")
+    gone = tmp_path / "Movies" / "Nerve" / "Nerve.mp4"
+    server = FakeServer(items=[
+        movie("Nerve", 328425, path=str(here)),
+        movie("Nerve", 328425, path=str(gone)),
+    ])
+    report = client(server).report()
+    assert report.stale_checked
+    assert [row["path"] for row in report.stale] == [str(gone)]
+    assert "no longer exist" in report.summary()
+    assert "UNIQUE constraint" in report.detail()
+
+
+def test_paths_that_mean_nothing_from_here_are_not_called_stale(tmp_path):
+    server = FakeServer(items=[
+        movie("Fight Club", 550, path=str(tmp_path / "elsewhere" / "a.mkv")),
+        movie("Dark", 70523, path="Shows/Dark/Dark.mkv"),
+    ])
+    report = client(server).report()
+    assert not report.stale_checked
+    assert report.stale == []
+
+
+def test_episodes_are_checked_for_staleness_but_not_counted_as_titles(tmp_path):
+    video = tmp_path / "e.mkv"
+    video.write_bytes(b"x")
+    server = FakeServer(items=[
+        {"Name": "Dark", "Type": "Series", "Path": str(tmp_path), "ProviderIds": {"Tmdb": "1"}},
+        {"Name": "Secrets", "Type": "Episode", "Path": str(video), "ProviderIds": {}},
+        {"Name": "Lies", "Type": "Episode", "Path": str(tmp_path / "gone.mkv"), "ProviderIds": {}},
+    ])
+    report = client(server).report()
+    assert report.total == 1 and report.identified == 1
+    assert [row["name"] for row in report.stale] == ["Lies"]

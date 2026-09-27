@@ -1,0 +1,1310 @@
+{
+  "movies": {
+    "Fight Club|1999": [
+      {
+        "id": 550,
+        "title": "Fight Club",
+        "original_title": "Fight Club",
+        "release_date": "1999-10-15",
+        "overview": "A ticking-time-bomb insomniac and a slippery soap salesman channel primal male aggression into a shocking new form of therapy. Their concept catches on, with underground \"fight clubs\" forming in every",
+        "poster_path": "/jSziioSwPVrOy9Yow3XhWIBDjq1.jpg"
+      }
+    ],
+    "The Witch|2015": [
+      {
+        "id": 310131,
+        "title": "The Witch",
+        "original_title": "The Witch",
+        "release_date": "2016-02-19",
+        "overview": "In 1630, a farmer relocates his family to a remote plot of land on the edge of a forest where strange, unsettling things happen. With suspicion and paranoia mounting, each family member's faith, loyal",
+        "poster_path": "/zap5hpFCWSvdWSuPGAQyjUv2wAC.jpg"
+      },
+      {
+        "id": 274854,
+        "title": "The Last Witch Hunter",
+        "original_title": "The Last Witch Hunter",
+        "release_date": "2015-10-21",
+        "overview": "The modern world holds many secrets, but by far the most astounding is that witches still live among us; vicious supernatural creatures intent on unleashing the Black Death upon the world and putting ",
+        "poster_path": "/dS9YdnJkxtKE2PKCSsxTaO7Jpf5.jpg"
+      },
+      {
+        "id": 23047,
+        "title": "Season of the Witch",
+        "original_title": "Season of the Witch",
+        "release_date": "2011-01-07",
+        "overview": "A 14th century Crusader returns with his comrade to a homeland devastated by the Black Plague. The Church commands the two knights to transport a witch to a remote abbey, where monks will perform a ri",
+        "poster_path": "/dNVqi8EsBtnnwfR6TgiWM51JOuS.jpg"
+      },
+      {
+        "id": 679066,
+        "title": "Valley of the Witch",
+        "original_title": "Valley of the Witch",
+        "release_date": "2015-01-13",
+        "overview": "Dormant spirits have been re-awakened in the Welsh village of Cwmgwrach. Can anyone stop the manifestation of ancient evil? Or is the village fated to pay for it's dark history?",
+        "poster_path": "/QSevZGSSMQrCV6LtFvU32b9JiR.jpg"
+      },
+      {
+        "id": 581993,
+        "title": "The Witch Chronicles",
+        "original_title": "The Witch Chronicles",
+        "release_date": "2015-03-02",
+        "overview": "After 300 years of seeking revenge on the Hekate Family through The Hekate Chronicles, Bertrand Guilladot's ghost, a Catholic Priest from Dijon, France in 1742, who sold his soul to the devil through ",
+        "poster_path": "/iJ4lBc6jeyASAwItODYEYAe2wzl.jpg"
+      },
+      {
+        "id": 489349,
+        "title": "The Last Witch",
+        "original_title": "The Last Witch",
+        "release_date": "2015-11-30",
+        "overview": "Three friends film a documentary about Joanna Toy, a woman convicted of witchcraft 400 years ago in the town of Terrassa, Spain. In 1619, six women were accused of witchcraft. Five were hanged after b",
+        "poster_path": "/AcyWQ1HnUXUcOzdpufwbqijJBwY.jpg"
+      },
+      {
+        "id": 385518,
+        "title": "The Night Witch",
+        "original_title": "The Night Witch",
+        "release_date": "2015-12-13",
+        "overview": "Nadezhda “Nadia” Popova was a 19-year-old amateur pilot when World War II came to her doorstep. After the Nazis entered the Soviet Union in 1941, Nadia joined the all-female 588th Night Bomber Regimen",
+        "poster_path": "/dk2xY3ipmpuz3flECekh8Ou9fRw.jpg"
+      },
+      {
+        "id": 526667,
+        "title": "The Witch",
+        "original_title": "Ведьма",
+        "release_date": "2015-06-23",
+        "overview": "A summer youth camp by the sea. Tonya, a quiet, reserved, and gullible girl, becomes neighbors with Lyudka, who is vibrant, assertive, and calculating. They both fall in love with the same boy. Sudden",
+        "poster_path": "/inBpHrLEgLDEZ6A8ZWkg3WS1XKw.jpg"
+      },
+      {
+        "id": 61005,
+        "title": "The Good Witch's Gift",
+        "original_title": "The Good Witch's Gift",
+        "release_date": "2010-11-13",
+        "overview": "Almost as soon as Jake and Cassie decide to get married on Christmas Eve, complications arise.",
+        "poster_path": "/cw6gQD0QRS3MA3bdGnAqQYSYhdr.jpg"
+      },
+      {
+        "id": 347413,
+        "title": "Little Witch Academia: The Enchanted Parade",
+        "original_title": "リトルウィッチアカデミア 魔法仕掛けのパレード",
+        "release_date": "2015-07-03",
+        "overview": "In Enchanted Parade, Akko, Lotte and Sucy, having gotten in trouble yet again, are forced to team up with three other troublemakers; Amanda O'Neill, Constance Braunschweig Albrechtsburger and Jasminek",
+        "poster_path": "/ubsZEiUtegc8dfVTsFQc9nvpHSX.jpg"
+      }
+    ],
+    "Beauty And The Beast|": [
+      {
+        "id": 321612,
+        "title": "Beauty and the Beast",
+        "original_title": "Beauty and the Beast",
+        "release_date": "2017-03-16",
+        "overview": "A live-action adaptation of Disney's version of the classic tale of a cursed prince and a beautiful young woman who helps him break the spell.",
+        "poster_path": "/hKegSKIDep2ewJWPUQD7u0KqFIp.jpg"
+      },
+      {
+        "id": 10020,
+        "title": "Beauty and the Beast",
+        "original_title": "Beauty and the Beast",
+        "release_date": "1991-10-22",
+        "overview": "Follow the adventures of Belle, a bright young woman who finds herself in the castle of a prince who's been turned into a mysterious beast. With the help of the castle's enchanted staff, Belle soon le",
+        "poster_path": "/hUJ0UvQ5tgE2Z9WpfuduVSdiCiU.jpg"
+      },
+      {
+        "id": 30844,
+        "title": "Beauty and the Beast",
+        "original_title": "Beauty and the Beast",
+        "release_date": "2010-02-11",
+        "overview": "A twist on the morality tale of forbidden love between the beautiful Belle and the feared Beast. As the villagers are being brutally murdered and the Beast is hunted down as the one responsible for th",
+        "poster_path": "/eupg5b3CIIbQSJrYa5GD7pNpj7M.jpg"
+      },
+      {
+        "id": 197796,
+        "title": "Beauty and the Beast",
+        "original_title": "La Belle et la Bête",
+        "release_date": "2014-02-12",
+        "overview": "Forced to face the cruel side of life, a devastated, bankrupt merchant chances upon the enchanted castle of a hideous creature, the mere sight of it chills the bone to the marrow. There, a fate worse ",
+        "poster_path": "/8bErT2koHXAUSW5PdLQqgL5gEEe.jpg"
+      },
+      {
+        "id": 269854,
+        "title": "Beauty and the Beast",
+        "original_title": "Beauty and the Beast",
+        "release_date": "1992-01-01",
+        "overview": "As a merchant sets off for market, he asks his three lovely daughters what they would like as a present upon his return. His youngest daughter, who he adoringly calls Beauty, replied. \"All I'd like is",
+        "poster_path": "/y5hNlse0idKlOSrtYBq8VFpMMzr.jpg"
+      },
+      {
+        "id": 258680,
+        "title": "Beauty and the Beast",
+        "original_title": "Beauty and the Beast",
+        "release_date": "1992-05-04",
+        "overview": "A young, beautiful girl awaits the day she will be killed after having asked for a most humble gift.",
+        "poster_path": "/f9nuGVTXEB5Ga34zJcFccM1nVC4.jpg"
+      },
+      {
+        "id": 266115,
+        "title": "Beauty and the Beast",
+        "original_title": "Beauty and the Beast",
+        "release_date": "1976-12-03",
+        "overview": "A beautiful girl agrees to marry a hideous, deformed beast and live in his castle in order to save her father's life.",
+        "poster_path": "/nDDpXGV00SH0gdVADqdWtJWlCZz.jpg"
+      },
+      {
+        "id": 13313,
+        "title": "Beauty and the Beast: The Enchanted Christmas",
+        "original_title": "Beauty and the Beast: The Enchanted Christmas",
+        "release_date": "1997-11-11",
+        "overview": "Astonished to find the Beast has a deep-seated hatred for the Christmas season, Belle endeavors to change his mind on the matter.",
+        "poster_path": "/l1Tb0fvnj9wnCgm5qnTRoO6OxDT.jpg"
+      },
+      {
+        "id": 197836,
+        "title": "Beauty and the Beast",
+        "original_title": "La bella e la bestia",
+        "release_date": "1977-04-18",
+        "overview": "Decameron-style collection of entertaining short stories with such diverse themes as nymphomania, bestiality, and masochism.",
+        "poster_path": "/bM1t4iV8Q8FXO9HIk7cNuTYKfUx.jpg"
+      },
+      {
+        "id": 402725,
+        "title": "Beauty and the Beast",
+        "original_title": "Beauty and the Beast",
+        "release_date": "1984-08-13",
+        "overview": "The beautiful daughter of a merchant sacrifices her freedom to save her father from the punishment of a cursed beast.",
+        "poster_path": "/g01IwlJcBW3DFOcHWJ6CzCYskX7.jpg"
+      }
+    ],
+    "Doctor Strange|": [
+      {
+        "id": 284052,
+        "title": "Doctor Strange",
+        "original_title": "Doctor Strange",
+        "release_date": "2016-10-25",
+        "overview": "After his career is destroyed, a brilliant but arrogant surgeon gets a new lease on life when a sorcerer takes him under her wing and trains him to defend the world against evil.",
+        "poster_path": "/uGBVj3bEbCoZbDjjl9wTxcygko1.jpg"
+      },
+      {
+        "id": 453395,
+        "title": "Doctor Strange in the Multiverse of Madness",
+        "original_title": "Doctor Strange in the Multiverse of Madness",
+        "release_date": "2022-05-04",
+        "overview": "Doctor Strange, with the help of mystical allies both old and new, traverses the mind-bending and dangerous alternate realities of the Multiverse to confront a mysterious new adversary.",
+        "poster_path": "/ddJcSKbcp4rKZTmuyWaMhuwcfMz.jpg"
+      },
+      {
+        "id": 14830,
+        "title": "Doctor Strange",
+        "original_title": "Doctor Strange",
+        "release_date": "2007-08-14",
+        "overview": "Dr. Stephen Strange embarks on a wondrous journey to the heights of a Tibetan mountain, where he seeks healing at the feet of the mysterious Ancient One.",
+        "poster_path": "/7ygcpWXsWmEc83j7zE8P0lvC0Q.jpg"
+      },
+      {
+        "id": 448383,
+        "title": "Doctor Strange: The Score-Cerer Supreme",
+        "original_title": "Doctor Strange: The Score-Cerer Supreme",
+        "release_date": "2017-02-28",
+        "overview": "A discussion of Michael Giacchino's work on the film and the themes the music conveys and supports for the film.",
+        "poster_path": "/zHJYRHI5HkQuwLW5KyeXGQ596u7.jpg"
+      },
+      {
+        "id": 448387,
+        "title": "Doctor Strange: The Fabric of Reality",
+        "original_title": "Doctor Strange: The Fabric of Reality",
+        "release_date": "2017-02-28",
+        "overview": "A detailed examination of the film's costumes: construction, functionality, and staying true to the characters. It also covers set design and construction, shooting in key locations, the film's scope,",
+        "poster_path": "/hdtlZ8ScjcEiYiIb5OqTnrz7CG8.jpg"
+      },
+      {
+        "id": 84230,
+        "title": "The Strange Case of Doctor Rx",
+        "original_title": "The Strange Case of Doctor Rx",
+        "release_date": "1942-03-27",
+        "overview": "Private eye Jerry Church is hired by a criminal defense lawyer after five mobsters he has gotten acquitted are apparently strangled by a serial killer.",
+        "poster_path": "/l6UDxqX9OywkYdezlg7HuKTv1gC.jpg"
+      },
+      {
+        "id": 1772354,
+        "title": "Untitled Doctor Strange Movie",
+        "original_title": "Untitled Doctor Strange Movie",
+        "release_date": "",
+        "overview": "Following the plot and events of Doctor Strange in the Multiverse of Madness (2022)",
+        "poster_path": null
+      },
+      {
+        "id": 809046,
+        "title": "Doctor Strange Love",
+        "original_title": "Doutor Estranho Amor - ou como aprendi a amar o preservativo e deixei de me preocupar",
+        "release_date": "2005-01-01",
+        "overview": "This documentary shows a Brigade of medicine students that goes to a school to prevent AIDS. For 10 weeks, we follow their failures and achievements with a class of difficult but interesting character",
+        "poster_path": null
+      },
+      {
+        "id": 1129849,
+        "title": "The Strange Experiment of Doctor Purefoy",
+        "original_title": "The Strange Experiment of Doctor Purefoy",
+        "release_date": "2009-07-27",
+        "overview": "Corey's only hope of graduating is taking an extra credit job as assistant to the mysterious Professor Purefoy. What started off innocently soon spirals into a nightmare.",
+        "poster_path": null
+      },
+      {
+        "id": 881927,
+        "title": "The Strange Doctor Tang Shenwei",
+        "original_title": "怪医唐慎微",
+        "release_date": "2014-01-01",
+        "overview": "",
+        "poster_path": "/5L5qpvhy76pOD0BQpourJV45UlM.jpg"
+      }
+    ],
+    "Rush Hour|": [
+      {
+        "id": 2109,
+        "title": "Rush Hour",
+        "original_title": "Rush Hour",
+        "release_date": "1998-09-18",
+        "overview": "When Hong Kong Inspector Lee is summoned to Los Angeles to investigate a kidnapping, the FBI doesn't want any outside help and assigns cocky LAPD Detective James Carter to distract Lee from the case. ",
+        "poster_path": "/nwPhAsfnb7f46bZkWLG7IRP5HXr.jpg"
+      },
+      {
+        "id": 5175,
+        "title": "Rush Hour 2",
+        "original_title": "Rush Hour 2",
+        "release_date": "2001-08-03",
+        "overview": "It's vacation time for Carter as he finds himself alongside Lee in Hong Kong wishing for more excitement. While Carter wants to party and meet the ladies, Lee is out to track down a Triad gang lord wh",
+        "poster_path": "/aBQf2vMiCINeVC9v6BGVYKXurTh.jpg"
+      },
+      {
+        "id": 5174,
+        "title": "Rush Hour 3",
+        "original_title": "Rush Hour 3",
+        "release_date": "2007-08-08",
+        "overview": "After a botched assassination attempt, the mismatched duo finds themselves in Paris, struggling to retrieve a precious list of names, as the murderous crime syndicate's henchmen try their best to stop",
+        "poster_path": "/mp9CzKxLa2i7yblMXUrzVfGqsCo.jpg"
+      },
+      {
+        "id": 1603330,
+        "title": "Rush Hour",
+        "original_title": "Rush Hour",
+        "release_date": "2024-03-06",
+        "overview": "A young woman’s heart is torn between her musician boyfriend who is on the brink of fame, and a man who understands her more than anyone.",
+        "poster_path": "/kNb9JOMxZY0Kie4rEXGbEWEFoGL.jpg"
+      },
+      {
+        "id": 235688,
+        "title": "Rush Hour",
+        "original_title": "Rush Hour",
+        "release_date": "1941-12-01",
+        "overview": "The British government tries to persuade people not to clog up the wartime (World War II) public transportation system by keeping its use to a minimum during \"rush hour\".",
+        "poster_path": null
+      },
+      {
+        "id": 1059776,
+        "title": "Rush Hour 4",
+        "original_title": "Rush Hour 4",
+        "release_date": "",
+        "overview": "The fourth installment in the franchise. Plot TBA.",
+        "poster_path": null
+      },
+      {
+        "id": 341950,
+        "title": "Rush Hour",
+        "original_title": "Час пик",
+        "release_date": "2006-03-02",
+        "overview": "A terminal diagnosis forces a career-obsessed advertising executive to rethink his priorities, relationships and outlook on life.",
+        "poster_path": "/2Bxd3OjBnwL30qwbbouVOT2fivt.jpg"
+      },
+      {
+        "id": 349066,
+        "title": "Rush Hour",
+        "original_title": "Rush Hour",
+        "release_date": "2018-04-30",
+        "overview": "Documentary film about the daily odyssey that involves moving from home to work in three different cities of the world: Mexico City, Istanbul and Los Angeles. Three stories, three cities and three cha",
+        "poster_path": "/28rqgMVYxQqa5ylKb1JFmvEpxfi.jpg"
+      },
+      {
+        "id": 1278966,
+        "title": "Rush Hour",
+        "original_title": "Rush Hour",
+        "release_date": "1970-01-01",
+        "overview": "Time lapse photography shows the swarm of commuters at London Waterloo station racing about at top speed.",
+        "poster_path": "/dyLqWY47bTCEiDLpINiNgR6WvtH.jpg"
+      },
+      {
+        "id": 157065,
+        "title": "Rush Hour",
+        "original_title": "Godzina szczytu",
+        "release_date": "1974-01-08",
+        "overview": "The life of engineer Maksymowicz changes dramatically when he accidentally learns that he is terminally ill.",
+        "poster_path": "/8lBvNJDEV2g48L4F0HzxyS3niGU.jpg"
+      }
+    ],
+    "Now You See Me|": [
+      {
+        "id": 75656,
+        "title": "Now You See Me",
+        "original_title": "Now You See Me",
+        "release_date": "2013-05-29",
+        "overview": "An FBI agent and an Interpol detective track a team of illusionists who pull off bank heists during their performances and reward their audiences with the money.",
+        "poster_path": "/tWsNYbrqy1p1w6K9zRk0mSchztT.jpg"
+      },
+      {
+        "id": 291805,
+        "title": "Now You See Me 2",
+        "original_title": "Now You See Me 2",
+        "release_date": "2016-06-02",
+        "overview": "One year after outwitting the FBI and winning the public’s adulation with their mind-bending spectacles, the Four Horsemen resurface only to find themselves face to face with a new enemy who enlists t",
+        "poster_path": "/A81kDB6a1K86YLlcOtZB27jriJh.jpg"
+      },
+      {
+        "id": 425274,
+        "title": "Now You See Me: Now You Don't",
+        "original_title": "Now You See Me: Now You Don't",
+        "release_date": "2025-11-12",
+        "overview": "The original Four Horsemen reunite with a new generation of illusionists to take on powerful diamond heiress Veronika Vanderberg, who leads a criminal empire built on money laundering and trafficking.",
+        "poster_path": "/oD3Eey4e4Z259XLm3eD3WGcoJAh.jpg"
+      },
+      {
+        "id": 1457735,
+        "title": "Untitled Now You See Me 4",
+        "original_title": "Untitled Now You See Me 4",
+        "release_date": "",
+        "overview": "The fourth instalment in the franchise. Plot TBA.",
+        "poster_path": "/3ZdJGPQ8yRiXX62Ph7NwRwLD7VU.jpg"
+      },
+      {
+        "id": 1404300,
+        "title": "If You Could See Me Now",
+        "original_title": "If You Could See Me Now",
+        "release_date": "",
+        "overview": "Follows Elizabeth, whose mother disappeared when she was a little girl. On the same night, Ivan arrived — her invisible friend, a boy her age that only she can see, sent to support her during a diffic",
+        "poster_path": null
+      },
+      {
+        "id": 805564,
+        "title": "Can You See Me Now?",
+        "original_title": "Can You See Me Now?",
+        "release_date": "1991-01-01",
+        "overview": "Lesbians explore the issues surrounding the production of lesbian based art: visibility, marginalization, subject matter, peers, and the medium itself.",
+        "poster_path": null
+      },
+      {
+        "id": 1450771,
+        "title": "Nicolás de Jesús' Now You See Me...",
+        "original_title": "Ahora Me Ves... De Nicolás de Jesús",
+        "release_date": "2026-12-24",
+        "overview": "Struggling fair owner Kesselring (Nicolás de Jesús) is given a unique opportunity to restore the fair to its former glory when his friend Dr. Goodkat (Fredy Roque) introduces him to Marcus Kelevra (Al",
+        "poster_path": "/z1nELGUselYiNhQy1Ksq2CHudD9.jpg"
+      },
+      {
+        "id": 869096,
+        "title": "Now Tell Me What You See",
+        "original_title": "Now Tell Me What You See",
+        "release_date": "2021-09-03",
+        "overview": "The newly inducted student leaders of Knox Grammar School set their sights on improving the school’s waning culture and spirit. They aim to establish a supporters’ group known as the ‘Tartan Army’, bu",
+        "poster_path": "/lnmTbLpIyRCcmrQ9X8DLqM2TNHQ.jpg"
+      },
+      {
+        "id": 412305,
+        "title": "Now You See Me, Now You Don’t",
+        "original_title": "怪俠一枝梅",
+        "release_date": "1994-12-22",
+        "overview": "Warlord Lei Zhengtian was hated by the people and many attempts were made to kill him. He therefore hired bodyguards to protect him. Although Lei was a tyrant, he feared his wife to death since his Wa",
+        "poster_path": "/3jMip0JS8Xws6lWymes8rjfdPlS.jpg"
+      },
+      {
+        "id": 1367113,
+        "title": "Volumetric Interviews: Now You See Me Moria",
+        "original_title": "Volumetric Interviews: Now You See Me Moria",
+        "release_date": "",
+        "overview": "Years after a fire burned down the infamous Moria camp in 2020, the living situation of refugees in Greece is still dire. Noemí, the Spanish photographer, shares the story of the Instagram project Now",
+        "poster_path": null
+      }
+    ],
+    "Black Panther|": [
+      {
+        "id": 284054,
+        "title": "Black Panther",
+        "original_title": "Black Panther",
+        "release_date": "2018-02-13",
+        "overview": "King T'Challa returns home to the reclusive, technologically advanced African nation of Wakanda to serve as his country's new leader. However, T'Challa soon finds that he is challenged for the throne ",
+        "poster_path": "/uxzzxijgPIY7slzFvMotPv8wjKA.jpg"
+      },
+      {
+        "id": 505642,
+        "title": "Black Panther: Wakanda Forever",
+        "original_title": "Black Panther: Wakanda Forever",
+        "release_date": "2022-11-09",
+        "overview": "Queen Ramonda, Shuri, M’Baku, Okoye and the Dora Milaje fight to protect their nation from intervening world powers in the wake of King T’Challa’s death.  As the Wakandans strive to embrace their next",
+        "poster_path": "/sv1xJUazXeYqALzczSZ3O6nkH75.jpg"
+      },
+      {
+        "id": 86841,
+        "title": "Black Panther",
+        "original_title": "Black Panther",
+        "release_date": "2010-01-18",
+        "overview": "Black Panther is the ruler and protector of the African nation of Wakanda. Using technology, wits, and extraordinary fighting ability he must protect his nation from an invasion led by Ulysses Klaw, t",
+        "poster_path": "/aXmsbVlvLCuBDMxUvpDJdYSAOFQ.jpg"
+      },
+      {
+        "id": 144807,
+        "title": "Black Panther",
+        "original_title": "Hei bao",
+        "release_date": "1973-09-28",
+        "overview": "Cheng Sing gets betrayed by his crime Partners and lands in Jail. After he gets out he's starting his trail of Revenge.",
+        "poster_path": "/vZ1dShHF3Bf3tLdSmdOOI006VFO.jpg"
+      },
+      {
+        "id": 1186236,
+        "title": "Black Panther",
+        "original_title": "黑豹",
+        "release_date": "1993-01-01",
+        "overview": "Hong Kong movie",
+        "poster_path": "/j0iy21769EBamGyrN6UL1mCtW9F.jpg"
+      },
+      {
+        "id": 1386618,
+        "title": "Black Panther 3",
+        "original_title": "Black Panther 3",
+        "release_date": "2028-12-13",
+        "overview": "T'Challa's son, T'Challa, comes of age with eyes on the crown of Wakanda.",
+        "poster_path": "/zJc9fYZxgq4yzI0Oru2e1Cf3a3V.jpg"
+      },
+      {
+        "id": 476176,
+        "title": "The Black Panther",
+        "original_title": "黑豹",
+        "release_date": "1969-03-28",
+        "overview": "A Wuxia mystery adventure from Cathay films.",
+        "poster_path": "/dyEPNyqQERU6cSXQJQYRoY2DA5C.jpg"
+      },
+      {
+        "id": 299096,
+        "title": "Black Panther",
+        "original_title": "Schwarzer Panther",
+        "release_date": "2013-06-30",
+        "overview": "After many years apart, Emilie meets her brother Jakob again. She not only shares her sadness about the loss of their parents with him, but also a secret...",
+        "poster_path": "/z5gMdlXTZmmBt2mYtFn4i4Pi9uH.jpg"
+      },
+      {
+        "id": 106876,
+        "title": "The Black Panther",
+        "original_title": "The Black Panther",
+        "release_date": "1977-12-26",
+        "overview": "A gung-ho ex-military man pursues a secret life of crime, culminating in the kidnapping of a teenage heiress.",
+        "poster_path": "/iR0GRhxL1GlpXTGTDvQKX1tfzrl.jpg"
+      },
+      {
+        "id": 252505,
+        "title": "The Black Panther Warriors",
+        "original_title": "黑豹天下",
+        "release_date": "1993-11-18",
+        "overview": "A group of specialists are recruited to steal from a police station.",
+        "poster_path": "/5pB8Ti73bPTdh9Os8G59k9OaBBz.jpg"
+      }
+    ],
+    "Death on the Nile|": [
+      {
+        "id": 505026,
+        "title": "Death on the Nile",
+        "original_title": "Death on the Nile",
+        "release_date": "2022-02-09",
+        "overview": "Belgian sleuth Hercule Poirot's Egyptian vacation aboard a glamorous river steamer turns into a terrifying search for a murderer when a picture-perfect couple's idyllic honeymoon is tragically cut sho",
+        "poster_path": "/kVr5zIAFSPRQ57Y1zE7KzmhzdMQ.jpg"
+      },
+      {
+        "id": 4192,
+        "title": "Death on the Nile",
+        "original_title": "Death on the Nile",
+        "release_date": "1978-09-29",
+        "overview": "As Hercule Poirot enjoys a luxurious cruise down the Nile, a newlywed heiress is found murdered on board and every elegant passenger becomes a prime suspect.",
+        "poster_path": "/7qEymSp6wCT19AJxb7T3u6aKpi1.jpg"
+      },
+      {
+        "id": 1604546,
+        "title": "Death on the Nile: Making of Featurette",
+        "original_title": "Death on the Nile: Making of Featurette",
+        "release_date": "1978-09-29",
+        "overview": "Featurette documenting the making of the film \"Death On The Nile\".",
+        "poster_path": null
+      },
+      {
+        "id": 1140752,
+        "title": "Death Loop",
+        "original_title": "Death Loop",
+        "release_date": "2021-10-17",
+        "overview": "A never ending loop of youth violence.",
+        "poster_path": "/fztX4qWOcK66In3JgZgTncHn4yn.jpg"
+      }
+    ],
+    "Nerve|": [
+      {
+        "id": 328387,
+        "title": "Nerve",
+        "original_title": "Nerve",
+        "release_date": "2016-06-27",
+        "overview": "Industrious high school senior Vee Delmonico has had it with living life on the sidelines. When pressured by friends to join the popular online game Nerve, Vee decides to sign up for just one dare in ",
+        "poster_path": "/qmSpHC0CSNyNll9WhlwWYuwoQ28.jpg"
+      },
+      {
+        "id": 199825,
+        "title": "Nerve",
+        "original_title": "Nerve",
+        "release_date": "2013-06-12",
+        "overview": "Jakob Evans suffers an emotional breakdown after the death of his wife in a car accident. His loss and pain runs deep as he claims to have found her in bed with another man just before she died. Unabl",
+        "poster_path": "/pJaf6TdXSU0K42UidgrAA86U79A.jpg"
+      },
+      {
+        "id": 791314,
+        "title": "Nerve",
+        "original_title": "Nervenkriege",
+        "release_date": "1995-01-01",
+        "overview": "Psychiatric patients refer to themselves as survivors, victims, former inmates, consumers, or users. \"Nerve\" potraits four persons from Vienna and New York expressing different positions and experienc",
+        "poster_path": null
+      },
+      {
+        "id": 56092,
+        "title": "Twisted Nerve",
+        "original_title": "Twisted Nerve",
+        "release_date": "1968-12-20",
+        "overview": "Martin Durnley is a young man with an infantilizing mother, resentful stepfather and an institutionalized brother with Down's syndrome. To cope, he retreats into an alternate child personality he call",
+        "poster_path": "/7U2pwwzvCb0XPIjDcM5Gn9dfrCu.jpg"
+      },
+      {
+        "id": 1363178,
+        "title": "Nerve",
+        "original_title": "ประสาท",
+        "release_date": "1975-11-29",
+        "overview": "Paratchanee, a young writer who often thinks she lacks life experience, lives with Anan, a wealthy husband who suffers from illnesses. One day, Netiya, a wealthy widow who has just been released from ",
+        "poster_path": "/zKfc7sAJHhURo960dFmIJDtEibf.jpg"
+      },
+      {
+        "id": 365265,
+        "title": "Raw Nerve",
+        "original_title": "Raw Nerve",
+        "release_date": "1999-09-16",
+        "overview": "A cop, who is losing his sanity, lures his girlfriend and his former partner into the dangers of arson, robbery, and murder.",
+        "poster_path": "/gF4vGKgFlsdr24dwQqU2T4Bhv51.jpg"
+      },
+      {
+        "id": 115201,
+        "title": "Raw Nerve",
+        "original_title": "Raw Nerve",
+        "release_date": "1991-06-28",
+        "overview": "Race car driver Jimmy Clayton has mind-shattering visions of young women being ruthlessly murdered. An investigative reporter catches wind of Jimmy's tale and tries to help him put the blood-soaked pi",
+        "poster_path": "/tMK2vC37Khsc5lTVg9MKcZc0SPi.jpg"
+      },
+      {
+        "id": 643077,
+        "title": "Nerve",
+        "original_title": "Nerve",
+        "release_date": "2001-01-01",
+        "overview": "A man seems to possess a psychic link to a serial killer who has abducted his 4-year-old son. This black-and-white short played numerous film festivals in 2001. Parts were eventually folded into Prend",
+        "poster_path": "/1l8oEI90aQ1hmYF0Nd4buAB8CDB.jpg"
+      },
+      {
+        "id": 1384537,
+        "title": "Nerve",
+        "original_title": "Nerve",
+        "release_date": "1914-07-11",
+        "overview": "",
+        "poster_path": null
+      },
+      {
+        "id": 618132,
+        "title": "Nerve",
+        "original_title": "Nervo",
+        "release_date": "2019-01-06",
+        "overview": "A drunk missing man. A locked refrigerator. A fingernail in a meatloaf. A suspicious situation.",
+        "poster_path": "/dBDhjAaTNzpDL6V7dm23eea6TYf.jpg"
+      }
+    ],
+    "Mr Bean Man vs. Baby|": [],
+    "Indiana Jones Raiders Lost Ark|": [
+      {
+        "id": 85,
+        "title": "Raiders of the Lost Ark",
+        "original_title": "Raiders of the Lost Ark",
+        "release_date": "1981-06-12",
+        "overview": "When Dr. Indiana Jones – the tweed-suited professor who just happens to be a celebrated archaeologist – is hired by the government to locate the legendary Ark of the Covenant, he finds himself up agai",
+        "poster_path": "/ceG9VzoRAVGwivFU403Wc3AHRys.jpg"
+      }
+    ],
+    "The Family Plan 2|": [
+      {
+        "id": 1363123,
+        "title": "The Family Plan 2",
+        "original_title": "The Family Plan 2",
+        "release_date": "2025-11-11",
+        "overview": "Now that Dan's assassin days are behind him, all he wants for Christmas is quality time with his kids. But when he learns his daughter has her own plans, he books a family trip to London—putting them ",
+        "poster_path": "/semFxuYx6HcrkZzslgAkBqfJvZk.jpg"
+      }
+    ],
+    "Dune - Part One|2021": [
+      {
+        "id": 438631,
+        "title": "Dune",
+        "original_title": "Dune",
+        "release_date": "2021-09-15",
+        "overview": "Paul Atreides, a brilliant and gifted young man born into a great destiny beyond his understanding, must travel to the most dangerous planet in the universe to ensure the future of his family and his ",
+        "poster_path": "/v1tRXZ4JtD2Iv6fjkPvT4GiwslV.jpg"
+      }
+    ],
+    "My Big Fat Greek Wedding 2|2016": [
+      {
+        "id": 302688,
+        "title": "My Big Fat Greek Wedding 2",
+        "original_title": "My Big Fat Greek Wedding 2",
+        "release_date": "2016-03-23",
+        "overview": "The continuing adventures of the Portokalos family. A follow-up to the 2002 comedy, \"My Big Fat Greek Wedding.\"",
+        "poster_path": "/lfPqApnLVPsYfdbpSHNnHIxTdmd.jpg"
+      }
+    ],
+    "Housefull 5|2025": [
+      {
+        "id": 1146210,
+        "title": "Housefull 5",
+        "original_title": "हाउसफ़ूल 5",
+        "release_date": "2025-06-05",
+        "overview": "A father writes his will — his son \"Jolly\" is going to get it all. But who is Jolly? The comedy unfolds as different people pose as the \"real\" Jolly on a cruise celebrating the father's birthday — whe",
+        "poster_path": "/iGvGkVOfsooO0ZBrhN5i6zXYUCy.jpg"
+      }
+    ],
+    "Sitaare Zameen Par|2025": [
+      {
+        "id": 1190511,
+        "title": "Sitaare Zameen Par",
+        "original_title": "सितारे ज़मीन पर",
+        "release_date": "2025-06-20",
+        "overview": "A disgraced basketball coach is given the chance to coach a team of players who are intellectually disabled as part of community services. Gulshan has apprehensions at first and feels out of place but",
+        "poster_path": "/adYjCJGSNiL7CIaDW3g0Bcg7r2Z.jpg"
+      }
+    ],
+    "Demon Slayer Kimetsu No Yaiba Infinity Castle|2025": [
+      {
+        "id": 1311031,
+        "title": "Demon Slayer: Kimetsu no Yaiba Infinity Castle",
+        "original_title": "劇場版「鬼滅の刃」無限城編 第一章 猗窩座再来",
+        "release_date": "2025-07-18",
+        "overview": "The Demon Slayer Corps are drawn into the Infinity Castle, where Tanjiro, Nezuko, and the Hashira face terrifying Upper Rank demons in a desperate fight as the final battle against Muzan Kibutsuji beg",
+        "poster_path": "/fWVSwgjpT2D78VUh6X8UBd2rorW.jpg"
+      },
+      {
+        "id": 635302,
+        "title": "Demon Slayer -Kimetsu no Yaiba- The Movie: Mugen Train",
+        "original_title": "劇場版「鬼滅の刃」無限列車編",
+        "release_date": "2020-10-16",
+        "overview": "Tanjiro Kamado, joined with Inosuke Hashibira, a boy raised by boars who wears a boar's head, and Zenitsu Agatsuma, a scared boy who reveals his true power when he sleeps, boards the Infinity Train on",
+        "poster_path": "/h8Rb9gBr48ODIwYUttZNYeMWeUU.jpg"
+      }
+    ],
+    "Angry Birds Movie|2016": [
+      {
+        "id": 153518,
+        "title": "The Angry Birds Movie",
+        "original_title": "The Angry Birds Movie",
+        "release_date": "2016-05-11",
+        "overview": "An island populated entirely by happy, flightless birds or almost entirely. In this paradise, Red, a bird with a temper problem, speedy Chuck, and the volatile Bomb have always been outsiders. But whe",
+        "poster_path": "/iOH0fEFtV9z9rZp9zmBFGGeWicv.jpg"
+      }
+    ],
+    "WALL-E|2008": [
+      {
+        "id": 877268,
+        "title": "WALL·E's Treasures & Trinkets",
+        "original_title": "WALL·E's Treasures & Trinkets",
+        "release_date": "2008-11-18",
+        "overview": "Short vignettes featured as a DVD Extra Short.",
+        "poster_path": "/pJfm3EggGLZToce08Obf7HQHXrP.jpg"
+      },
+      {
+        "id": 10681,
+        "title": "WALL·E",
+        "original_title": "WALL·E",
+        "release_date": "2008-06-26",
+        "overview": "After hundreds of years doing what he was built for, WALL•E— a robot designed to clean up the earth—discovers a new purpose in life when he meets a sleek search robot named EVE. EVE comes to realize t",
+        "poster_path": "/hbhFnRzzg6ZDmm8YAmxBnQpQIPh.jpg"
+      },
+      {
+        "id": 10673,
+        "title": "Wall Street",
+        "original_title": "Wall Street",
+        "release_date": "1987-12-10",
+        "overview": "A young and impatient stockbroker is willing to do anything to get to the top, including trading on illegal inside information taken through a ruthless and greedy corporate raider, who takes the youth",
+        "poster_path": "/2tQYq9ntzn2dEwDIGLBSipYPenv.jpg"
+      },
+      {
+        "id": 13413,
+        "title": "BURN·E",
+        "original_title": "BURN·E",
+        "release_date": "2008-11-17",
+        "overview": "What lengths will a robot undergo to do his job? BURN·E is a dedicated hard working robot who finds himself locked out of his ship. BURN·E quickly learns that completing a simple task can often be a v",
+        "poster_path": "/1wOReJq1vArLBSejND2Jbw0KeKh.jpg"
+      },
+      {
+        "id": 47271,
+        "title": "Roger Waters: The Wall - Live in Berlin",
+        "original_title": "Roger Waters: The Wall - Live in Berlin",
+        "release_date": "1990-07-21",
+        "overview": "A global television broadcast of the event in which former Pink Floyd leader singer and composer Roger Waters led an all-star cast in a mammoth benefit performance of his acclaimed concept album, The ",
+        "poster_path": "/djjobmdz3bUUL641d1pLgBevK02.jpg"
+      },
+      {
+        "id": 45830,
+        "title": "Behind the Wall",
+        "original_title": "Behind the Wall",
+        "release_date": "2008-08-30",
+        "overview": "In this chilling, atmospheric thriller, Katelyn (Lindy Booth) seeks answers about the brutal murder that claimed her mother's life 20 years ago in the lighthouse where they lived, a crime for which he",
+        "poster_path": "/jDlPWlc4ei1kG6zAwDlg1KxDdGi.jpg"
+      }
+    ],
+    "IT|2017": [
+      {
+        "id": 346364,
+        "title": "It",
+        "original_title": "It",
+        "release_date": "2017-09-06",
+        "overview": "In a small town in Maine, seven children known as The Losers Club come face to face with life problems, bullies and a monster that takes the shape of a clown called Pennywise.",
+        "poster_path": "/9E2y5Q7WlCVNEhP5GiVTjhEhx1o.jpg"
+      },
+      {
+        "id": 239,
+        "title": "Some Like It Hot",
+        "original_title": "Some Like It Hot",
+        "release_date": "1959-03-19",
+        "overview": "In Prohibition-era Chicago, musicians Joe and Jerry witness a mob hit, and flee the state in an all-female band disguised as Josephine and Daphne, but further complications set in.",
+        "poster_path": "/hVIKyTK13AvOGv7ICmJjK44DTzp.jpg"
+      },
+      {
+        "id": 50546,
+        "title": "Just Go with It",
+        "original_title": "Just Go with It",
+        "release_date": "2011-02-10",
+        "overview": "While romancing Palmer, a much younger schoolteacher, plastic surgeon Danny Maccabee enlists his loyal assistant Katherine to pretend to be his soon to be ex-wife, in order to cover up a careless lie.",
+        "poster_path": "/5nr4n667HD80Wr7dYmqhIYi6CHN.jpg"
+      },
+      {
+        "id": 293,
+        "title": "A River Runs Through It",
+        "original_title": "A River Runs Through It",
+        "release_date": "1992-10-09",
+        "overview": "The Maclean brothers, Paul and Norman, live a relatively idyllic life in rural Montana, spending much of their time fly fishing. The sons of a minister, the boys eventually part company when Norman mo",
+        "poster_path": "/aVP45oS2cBL4WtZ1kB7r8uarruB.jpg"
+      },
+      {
+        "id": 1585,
+        "title": "It's a Wonderful Life",
+        "original_title": "It's a Wonderful Life",
+        "release_date": "1946-12-20",
+        "overview": "George Bailey has spent his entire life giving to the people of Bedford Falls.  All that prevents rich skinflint Mr. Potter from taking over the entire town is George's modest building and loan compan",
+        "poster_path": "/bSqt9rhDZx1Q7UZ86dBPKdNomp2.jpg"
+      },
+      {
+        "id": 418078,
+        "title": "It Comes at Night",
+        "original_title": "It Comes at Night",
+        "release_date": "2017-06-09",
+        "overview": "Secure within a desolate home as an unnatural threat terrorizes the world, a man has established a tenuous domestic order with his wife and son, but this will soon be put to test when a desperate youn",
+        "poster_path": "/rNKJpFMlOZn5zkzBPZxEJrQn5Km.jpg"
+      },
+      {
+        "id": 425007,
+        "title": "It Watches",
+        "original_title": "It Watches",
+        "release_date": "2016-12-06",
+        "overview": "Andre, recovering from a recent accident, agrees to help his friend Robert by taking over a house sitting job at a creepy home nestled in the hills above Los Angeles. As night comes, the house reveals",
+        "poster_path": "/5TLHMLgCCkEszjpFzAwRjlgwS0E.jpg"
+      },
+      {
+        "id": 253235,
+        "title": "And So It Goes",
+        "original_title": "And So It Goes",
+        "release_date": "2014-07-10",
+        "overview": "Nobody likes self-centered realtor Oren Little, and he prefers it that way. He's deliberately mean to anyone who crosses his path and wants nothing more than to sell one final house and retire. His li",
+        "poster_path": "/bJoWtA8OAIqavlb5mbx3EzvxFUA.jpg"
+      },
+      {
+        "id": 380109,
+        "title": "Catch It",
+        "original_title": "Catch It",
+        "release_date": "2015-09-03",
+        "overview": "A group of cute meerkats painstakingly care for their beloved and unique fruit, but a vulture has a mind to disturb their peace of mind.",
+        "poster_path": "/hgupCnQ3vyPkmvjP03mbhha9TzC.jpg"
+      },
+      {
+        "id": 501007,
+        "title": "It",
+        "original_title": "It",
+        "release_date": "2017-12-14",
+        "overview": "A blind man reports on an eclipse, a light phenomenon that he perceives through senses that do not involve sight. He takes us by the hand and guides us through the dark, through this temporary event t",
+        "poster_path": "/cBu6jlMvlaB3H8oKL8gNcOqzU4C.jpg"
+      }
+    ]
+  },
+  "shows": {
+    "Dark|": [
+      {
+        "id": 70523,
+        "name": "Dark",
+        "original_name": "Dark",
+        "first_air_date": "2017-12-01",
+        "overview": "A missing child sets four families on a frantic hunt for answers as they unearth a mind-bending mystery that spans three generations.",
+        "poster_path": "/apbrbWs8M9lyOpJYU5WXrpFbk1Z.jpg"
+      },
+      {
+        "id": 196322,
+        "name": "Dark Matter",
+        "original_name": "Dark Matter",
+        "first_air_date": "2024-05-07",
+        "overview": "Jason Dessen is abducted into an alternate version of his life. To get back to his real family, he embarks on a harrowing journey to save them from the most terrifying foe imaginable: himself.",
+        "poster_path": "/2DPmTlv8F0V1TQBPmlsGOVOhtWk.jpg"
+      },
+      {
+        "id": 2883,
+        "name": "Dark Shadows",
+        "original_name": "Dark Shadows",
+        "first_air_date": "1966-06-27",
+        "overview": "Dark Shadows is an American gothic soap opera that originally aired weekdays on the ABC television network, from June 27, 1966, to April 2, 1971. The show was created by Dan Curtis. The story bible, w",
+        "poster_path": "/eRtnI7qTJIiPUmlY3J8TTM3jlT7.jpg"
+      },
+      {
+        "id": 128904,
+        "name": "Dark Winds",
+        "original_name": "Dark Winds",
+        "first_air_date": "2022-06-12",
+        "overview": "This psychological thriller follows two Navajo police officers, Leaphorn and Chee, in the 1970s Southwest as their search for clues in a grisly double murder case forces them to challenge their own sp",
+        "poster_path": "/kDlrMN0P9ByrEH2GoRbBFeZHbcf.jpg"
+      },
+      {
+        "id": 2407,
+        "name": "Dark Angel",
+        "original_name": "Dark Angel",
+        "first_air_date": "2000-10-03",
+        "overview": "Super soldier Max Guevera tries to live a normal life in post-apocalyptic Seattle while eluding capture by government agents from the covert biotech facility she escaped from as a child and searching ",
+        "poster_path": "/wrWoXvIwyk4UrRZ3OHzXhW89Gnk.jpg"
+      },
+      {
+        "id": 108847,
+        "name": "AEW Dark",
+        "original_name": "AEW Dark",
+        "first_air_date": "2019-10-08",
+        "overview": "AEW Dark is a weekly web series featuring untelevised matches from the TNT series AEW Dynamite. Former WCW announcer Tony Schiavone hosts the program.",
+        "poster_path": "/ir0wYEhfGkpjHtrZ1ULUc1gx7AI.jpg"
+      },
+      {
+        "id": 68507,
+        "name": "His Dark Materials",
+        "original_name": "His Dark Materials",
+        "first_air_date": "2019-11-03",
+        "overview": "Lyra is an orphan who lives in a parallel universe in which science, theology and magic are entwined. Her search for a kidnapped friend uncovers a sinister plot involving stolen children and turns int",
+        "poster_path": "/g6tIKGc3f1H5QMz1dcgCwADKpZ7.jpg"
+      },
+      {
+        "id": 18797,
+        "name": "Dark Blue",
+        "original_name": "Dark Blue",
+        "first_air_date": "2009-07-15",
+        "overview": "Wandering in and out of he underbelly of Los Angeles, where criminals roam free under the veil of night or hide in the shadows of day, is routine for Lieutenant Carter Shaw and his special undercover ",
+        "poster_path": "/wtCGJl9xOSKKHHo77Txnljykmem.jpg"
+      },
+      {
+        "id": 68678,
+        "name": "Dark Tales",
+        "original_name": "聊齋",
+        "first_air_date": "1996-03-18",
+        "overview": "Play depicts the world of love, promises not withstand the test of \"green Feixianguan\"; Fox tells ghost battle of wits, difficult to distinguish between good and evil \"Phantom fox spirit\"; vigilance o",
+        "poster_path": "/znTYV42gAEvU1T279sYO0O5UvGg.jpg"
+      },
+      {
+        "id": 298939,
+        "name": "The Dark",
+        "original_name": "The Dark",
+        "first_air_date": "2026-07-12",
+        "overview": "A serial killer stalks the Scottish wilderness. When a young man’s body is discovered, DI Monica Kennedy must catch the murderer before a small community is torn apart.",
+        "poster_path": "/mcrx2gcVd5mVVOQrdEWXayFbvVB.jpg"
+      }
+    ],
+    "The 100|": [
+      {
+        "id": 48866,
+        "name": "The 100",
+        "original_name": "The 100",
+        "first_air_date": "2014-03-19",
+        "overview": "100 years in the future, when the Earth has been abandoned due to radioactivity, the last surviving humans live on an ark orbiting the planet — but the ark won't last forever. So the repressive regime",
+        "poster_path": "/wHIMMLFsk32wIzDmawWkYVbxFCS.jpg"
+      },
+      {
+        "id": 223564,
+        "name": "The 100 Girlfriends Who Really, Really, Really, Really, REALLY Love You",
+        "original_name": "君のことが大大大大大好きな100人の彼女",
+        "first_air_date": "2023-10-08",
+        "overview": "Rentaro Aijo was rejected 100 times in middle school. He visits a shrine and prays for better luck in high school. The God of Love appears and promises that he'll soon meet 100 people he's destined to",
+        "poster_path": "/kBiPU7I7TEJdDXu8tHgVrgL5zAU.jpg"
+      },
+      {
+        "id": 67141,
+        "name": "The $100,000 Pyramid",
+        "original_name": "The $100,000 Pyramid",
+        "first_air_date": "2016-06-27",
+        "overview": "In $100,000 Pyramid, contestants are in teams of two. The goal of the game is to help your partner guess an answer, by listing items that would be included in said answer, or synonymous. For instance,",
+        "poster_path": "/q4M2OYBvyDgmmSCKgj5PgbFBY1y.jpg"
+      },
+      {
+        "id": 217766,
+        "name": "Zom 100: Bucket List of the Dead",
+        "original_name": "ゾン100～ゾンビになるまでにしたい100のこと～",
+        "first_air_date": "2023-07-09",
+        "overview": "An overworked 24-year-old finally decides to live a little and create a bucket list, when a zombie outbreak hits the country.",
+        "poster_path": "/XzOeAppGpnsSAiK82idkg0BoCt.jpg"
+      },
+      {
+        "id": 101576,
+        "name": "The Abyss of 100 Flowers",
+        "original_name": "百花深处",
+        "first_air_date": "2012-02-18",
+        "overview": "During 1930s Minguo in the nation's capital, opera performer Xiao Jun Sheng is arrested for the murders of five women at the peak of his career after a witness, Master Na, claimed to see him at one of",
+        "poster_path": "/mljMSOhUrrcHcVk9EWkrxCgGLc2.jpg"
+      },
+      {
+        "id": 89736,
+        "name": "The Forbidden City 100",
+        "original_name": "故宫100",
+        "first_air_date": "2012-01-01",
+        "overview": "100 timeless images of the Forbidden City",
+        "poster_path": "/6rO2IRcxpiC4vjCkh8PSU0j1z2f.jpg"
+      },
+      {
+        "id": 11047,
+        "name": "The 100 Lives of Black Jack Savage",
+        "original_name": "The 100 Lives of Black Jack Savage",
+        "first_air_date": "1991-03-31",
+        "overview": "The 100 Lives of Black Jack Savage is a television series broadcast in the United States by NBC and produced by Stephen J. Cannell Productions in association with Walt Disney Television. This show ori",
+        "poster_path": "/qEEY0Ue6yOZcFFNORSpMTAraOKx.jpg"
+      },
+      {
+        "id": 22423,
+        "name": "100 Greatest Songs of the '80s",
+        "original_name": "100 Greatest Songs of the '80s",
+        "first_air_date": "2006-10-30",
+        "overview": "",
+        "poster_path": "/oZWxwHjN1WSGJJgqVVfYY2VxAmv.jpg"
+      },
+      {
+        "id": 120161,
+        "name": "100% Wolf: The Legend of the Moonstone",
+        "original_name": "100% Wolf: The Legend of the Moonstone",
+        "first_air_date": "2020-12-27",
+        "overview": "Freddy may be a poodle, but he has the heart of a wolf, and he's going to prove it by graduating from the werewolf-only Howlington Academy!",
+        "poster_path": "/mysnnnNc6AN8GIyAF7O4ySCSvPp.jpg"
+      },
+      {
+        "id": 231483,
+        "name": "Live to 100: Secrets of the Blue Zones",
+        "original_name": "Live to 100: Secrets of the Blue Zones",
+        "first_air_date": "2023-08-30",
+        "overview": "Travel around the world with author Dan Buettner to discover five unique communities where people live extraordinarily long and vibrant lives.",
+        "poster_path": "/aI22aHKtFHQ5r6AVu0uf7q9UUAn.jpg"
+      }
+    ],
+    "Modern Family|2009": [
+      {
+        "id": 1421,
+        "name": "Modern Family",
+        "original_name": "Modern Family",
+        "first_air_date": "2009-09-23",
+        "overview": "The Pritchett-Dunphy-Tucker clan is a wonderfully large and blended family. They give us an honest and often hilarious look into the sometimes warm, sometimes twisted, embrace of the modern family.",
+        "poster_path": "/k5Qg5rgPoKdh3yTJJrLtyoyYGwC.jpg"
+      }
+    ],
+    "Gravity Falls|": [
+      {
+        "id": 40075,
+        "name": "Gravity Falls",
+        "original_name": "Gravity Falls",
+        "first_air_date": "2012-06-15",
+        "overview": "Twin brother and sister Dipper and Mabel Pines are in for an unexpected adventure when they spend the summer helping their great uncle Stan run a tourist trap in the mysterious town of Gravity Falls, ",
+        "poster_path": "/qwi3p6PzKfQZ4YXBzv3CP5pO2dE.jpg"
+      }
+    ],
+    "One Piece|": [
+      {
+        "id": 37854,
+        "name": "One Piece",
+        "original_name": "ワンピース",
+        "first_air_date": "1999-10-20",
+        "overview": "Years ago, the fearsome Pirate King, Gol D. Roger was executed leaving a huge pile of treasure and the famous \"One Piece\" behind. Whoever claims the \"One Piece\" will be named the new King of the Pirat",
+        "poster_path": "/dB4EDhre2dsC2kxYDavyKWqLQwi.jpg"
+      },
+      {
+        "id": 111110,
+        "name": "ONE PIECE",
+        "original_name": "ONE PIECE",
+        "first_air_date": "2023-08-31",
+        "overview": "With his straw hat and ragtag crew, young pirate Monkey D. Luffy goes on an epic voyage for treasure.",
+        "poster_path": "/blWCPEqDGLBuLB9u89CxP9ORQP4.jpg"
+      },
+      {
+        "id": 241709,
+        "name": "THE ONE PIECE",
+        "original_name": "THE ONE PIECE",
+        "first_air_date": "",
+        "overview": "Determined to become King of the Pirates, Monkey D. Luffy leads his Straw Hat crew across treacherous seas in search of the legendary One Piece while facing ruthless rivals, powerful enemies, and coun",
+        "poster_path": "/tcBHXNxz62RaAiDRbkm6DEwiXbJ.jpg"
+      },
+      {
+        "id": 318918,
+        "name": "LEGO ONE PIECE",
+        "original_name": "LEGO ONE PIECE",
+        "first_air_date": "2026-09-29",
+        "overview": "Usopp spins a tall tale about the Straw Hats' journey across the East Blue into the Grand Line before Chopper joined the crew.",
+        "poster_path": "/j3aJ4BtFC29nOdV7FsEYD8kQk35.jpg"
+      },
+      {
+        "id": 243471,
+        "name": "One Piece Characters Log",
+        "original_name": "ワンピース キャラクターズLog",
+        "first_air_date": "2016-06-20",
+        "overview": "One Piece Characters Log is a series of recap episodes for the One Piece anime, made to commemorate the release of One Piece Film: Gold. The episodes recap the stories of each of the nine Straw Hat Pi",
+        "poster_path": "/aHRHoWK4fSItzAoQO6uz3gm0OYl.jpg"
+      },
+      {
+        "id": 287202,
+        "name": "One Piece in Love",
+        "original_name": "恋するワンピース",
+        "first_air_date": "2025-04-01",
+        "overview": "The story is about three high school students: a young male student, his girlfriend and a third wheel who is a One Piece fanatic. Their names are similar to the Straw Hat Pirates and the group form a ",
+        "poster_path": "/7dl79wHu9ab1JK7WSUtbUHegBEX.jpg"
+      },
+      {
+        "id": 334601,
+        "name": "One Piece Log: Fish-Man Island Saga",
+        "original_name": "SPECIAL EDITED VERSION『ONE PIECE』魚人島編",
+        "first_air_date": "2024-11-03",
+        "overview": "Two years after the Summit War, Monkey D. Luffy plans to reunite with the Straw Hat Pirates in the Sabaody Archipelago. However, the Marines obstruct Luffy's path with overwhelming force. Meanwhile, t",
+        "poster_path": "/5pdBg9PvI4NX78i1ZvRKdciPIJC.jpg"
+      },
+      {
+        "id": 316804,
+        "name": "ONE PIECE BONUS CONTENT",
+        "original_name": "ONE PIECE BONUS CONTENT",
+        "first_air_date": "2026-03-17",
+        "overview": "Take a voyage behind the scenes in this showcase of the effects, Easter eggs and jaw-dropping stunts that brought Season 2 to life.",
+        "poster_path": "/vsa5qAIgtSHPgXdf32RRjyyphkg.jpg"
+      },
+      {
+        "id": 332522,
+        "name": "One Piece D&D",
+        "original_name": "One Piece D&D",
+        "first_air_date": "2020-04-12",
+        "overview": "One Piece D&D is produced and streamed by Rustage, it is a D&D inspired One Piece Adventure streamed on his twitch and uploaded to his second channel, it stars four anime YouTube personalities! Willia",
+        "poster_path": "/c8H7E3IEOAhdlhPjOJcaP1DoeGm.jpg"
+      },
+      {
+        "id": 318421,
+        "name": "ONE PIECE: Into the Grand Line: Official Podcast",
+        "original_name": "ONE PIECE: Into the Grand Line: Official Podcast",
+        "first_air_date": "2026-03-13",
+        "overview": "The Straw Hats take the helm for a deep dive into the making of season 2, featuring candid chats with the cast, crew and Oda himself.",
+        "poster_path": "/sF94dv9FYrBdoYrVGiSV2Qx8pvg.jpg"
+      }
+    ],
+    "Squid Game|": [
+      {
+        "id": 93405,
+        "name": "Squid Game",
+        "original_name": "오징어 게임",
+        "first_air_date": "2021-09-17",
+        "overview": "Hundreds of cash-strapped players accept a strange invitation to compete in children's games. Inside, a tempting prize awaits — with deadly high stakes.",
+        "poster_path": "/1QdXdRYfktUSONkl1oD5gc6Be0s.jpg"
+      },
+      {
+        "id": 204082,
+        "name": "Squid Game: The Challenge",
+        "original_name": "Squid Game: The Challenge",
+        "first_air_date": "2023-11-22",
+        "overview": "In this reality competition show inspired by \"Squid Game,\" 456 players put their skills to the ultimate test for a life-changing $4.56 million prize.",
+        "poster_path": "/eAjXAgdjPMZH9Ugub7XYPowFoS1.jpg"
+      },
+      {
+        "id": 321480,
+        "name": "Squid Game: The Official Podcast",
+        "original_name": "Squid Game: The Official Podcast",
+        "first_air_date": "2024-12-19",
+        "overview": "Hosts Phil Yu and Kiera Please unpack the twisted politics of fairness, the final betrayal of the Os, and Player 456's decision to protect the baby.",
+        "poster_path": "/gMKbFGUA6BnD7HsORtN0tdpDCxA.jpg"
+      }
+    ],
+    "Game of Thrones|2011": [
+      {
+        "id": 1399,
+        "name": "Game of Thrones",
+        "original_name": "Game of Thrones",
+        "first_air_date": "2011-04-17",
+        "overview": "Seven noble families fight for control of the mythical land of Westeros. Friction between the houses leads to full-scale war. All while a very ancient evil awakens in the farthest north. Amidst the wa",
+        "poster_path": "/1XS1oqL89opfnbLl8WnZY1O1uJx.jpg"
+      }
+    ]
+  },
+  "seasons": {
+    "70523|1": {
+      "1": "Secrets",
+      "2": "Lies",
+      "3": "Past and Present",
+      "4": "Double Lives",
+      "5": "Truths",
+      "6": "Sic Mundus Creatus Est",
+      "7": "Crossroads",
+      "8": "As You Sow, So You Shall Reap",
+      "9": "Everything Is Now",
+      "10": "Alpha and Omega"
+    },
+    "48866|3": {
+      "1": "Wanheda (1)",
+      "2": "Wanheda (2)",
+      "3": "Ye Who Enter Here",
+      "4": "Watch the Thrones",
+      "5": "Hakeldama",
+      "6": "Bitter Harvest",
+      "7": "Thirteen",
+      "8": "Terms and Conditions",
+      "9": "Stealing Fire",
+      "10": "Fallen",
+      "11": "Nevermore",
+      "12": "Demons",
+      "13": "Join or Die",
+      "14": "Red Sky at Morning",
+      "15": "Perverse Instantiation (1)",
+      "16": "Perverse Instantiation (2)"
+    },
+    "40075|1": {
+      "1": "Tourist Trapped",
+      "2": "The Legend of the Gobblewonker",
+      "3": "Headhunters",
+      "4": "The Hand That Rocks the Mabel",
+      "5": "The Inconveniencing",
+      "6": "Dipper vs. Manliness",
+      "7": "Double Dipper",
+      "8": "Irrational Treasure",
+      "9": "The Time Traveler's Pig",
+      "10": "Fight Fighters",
+      "11": "Little Dipper",
+      "12": "Summerween",
+      "13": "Boss Mabel",
+      "14": "Bottomless Pit!",
+      "15": "The Deep End",
+      "16": "Carpet Diem",
+      "17": "Boyz Crazy",
+      "18": "Land Before Swine",
+      "19": "Dreamscaperers (1)",
+      "20": "Gideon Rises (2)"
+    },
+    "37854|1": {
+      "1": "I'm Luffy! The Man Who Will Become the Pirate King!",
+      "2": "The Great Swordsman Appears! Pirate Hunter, Roronoa Zoro",
+      "3": "Morgan VS Luffy! Who's This Beautiful Young Girl?",
+      "4": "Luffy's Past! The Red-haired Shanks appears",
+      "5": "Fear, Mysterious Power! Pirate Clown Captain Buggy!",
+      "6": "Desperate Situation! Beast Tamer Mohji vs Luffy!",
+      "7": "Grand Duel! Zoro the Swordsman vs Cabaji the Acrobat!",
+      "8": "Who Will Win? Showdown Between the True Powers of the Devil!",
+      "9": "The Honorable Liar? Captain Usopp!",
+      "10": "The Weirdest Guy Ever! Jango the Hypnotist!",
+      "11": "Expose the Plot! Pirate Butler, Captain Kuro!",
+      "12": "Clash with the Black Cat Pirates! The Great Battle on the Slope!",
+      "13": "The Terrifying Duo! Meowban Brothers vs. Zoro!",
+      "14": "Luffy Back in Action! Miss Kaya's Desperate Resistance!",
+      "15": "Beat Kuro! Usopp the Man's Tearful Resolve!",
+      "16": "Protect Kaya! The Usopp Pirates' Great Efforts!",
+      "17": "Anger Explosion! Kuro vs. Luffy! How it Ends!",
+      "18": "You're the Weird Creature! Gaimon and His Strange Friends!",
+      "19": "The Three-Sword Style's Past! Zoro and Kuina's Vow!",
+      "20": "Famous Cook! Sanji of the Sea Restaurant!",
+      "21": "Unwelcome Customer! Sanji's Food and Ghin's Debt!",
+      "22": "The Strongest Pirate Fleet! Commodore Don Krieg!",
+      "23": "Protect Baratie! The Great Pirate, Red Foot Zeff!",
+      "24": "Hawk-Eye Mihawk! The Great Swordsman Zoro Falls At Sea!",
+      "25": "The Deadly Foot Technique Bursts Forth! Sanji vs. The Invincible Pearl!",
+      "26": "Zeff and Sanji's Dream! The Illusory All Blue!",
+      "27": "Cool-headed, Cold-hearted Demon! Pirate Fleet Chief Commander Ghin!",
+      "28": "I Won't Die! Fierce Battle, Luffy vs. Krieg!",
+      "29": "The Conclusion of the Deadly Battle! A Spear of Blind Determination!",
+      "30": "Set Sail! The Seafaring Cook Sets Off With Luffy!",
+      "31": "The Worst Man in the Eastern Seas! Fishman Pirate Arlong!",
+      "32": "Witch of Cocoyashi Village! Arlong's Female Leader!",
+      "33": "Usopp Dead?! When is Luffy Going to Make Landfall?!",
+      "34": "Everyone's Gathered! Usopp Speaks the Truth About Nami!",
+      "35": "Untold Past! Female Warrior Bellemere!",
+      "36": "Survive! Mother Bellemere and Nami's Bond!",
+      "37": "Luffy Rises! Result of the Broken Promise!",
+      "38": "Luffy in Big Trouble! Fishmen vs. The Luffy Pirates!",
+      "39": "Luffy Submerged! Zoro vs. Hatchan the Octopus!",
+      "40": "Proud Warriors! Sanji and Usopp's Fierce Battles!",
+      "41": "Luffy at Full Power! Nami's Determination and the Straw Hat!",
+      "42": "Explosion! Fishman Arlong's Fierce Assault From the Sea!",
+      "43": "End of the Fishman Empire! Nami's My Friend!",
+      "44": "Setting Out with a Smile! Farewell, Hometown Cocoyashi Village!",
+      "45": "Bounty! Straw Hat Luffy Becomes Known to the World!",
+      "46": "Chase Straw Hat! Little Buggy's Big Adventure!",
+      "47": "The Wait is Over! The Return of Captain Buggy!",
+      "48": "The Town of the Beginning and the End! Landfall at Logue Town!",
+      "49": "Zoro's New Swords and the Woman Sergeant Major!",
+      "50": "Usopp vs. Daddy the Parent! Showdown at High!",
+      "51": "Fiery Cooking Battle? Sanji vs. The Beautiful Chef!",
+      "52": "Buggy's Revenge! The Man Who Smiles On the Execution Platform!",
+      "53": "The Legend Has Started! Head for the Grand Line!",
+      "54": "Precursor to a New Adventure! Apis, a Mysterious Girl!",
+      "55": "Miraculous Creature! Apis's Secret and The Legendary Island!",
+      "56": "Eric Attacks! Great Escape From Warship Island!",
+      "57": "A Solitary Island in the Distant Sea! The Legendary Lost Island!",
+      "58": "Showdown in the Ruins! Tense Zoro vs. Eric!",
+      "59": "Luffy, Completely Surrounded! Commodore Nelson's Secret Strategy!",
+      "60": "Through the Sky They Soar! The 1000 Year Legend Lives Again!",
+      "61": "An Angry Showdown! Cross the Red Line!"
+    },
+    "93405|3": {
+      "1": "Keys and Knives",
+      "2": "The Starry Night",
+      "3": "It's Not Your Fault",
+      "4": "222",
+      "5": "○△□",
+      "6": "Humans Are..."
+    },
+    "1399|1": {
+      "1": "Winter Is Coming",
+      "2": "The Kingsroad",
+      "3": "Lord Snow",
+      "4": "Cripples, Bastards, and Broken Things",
+      "5": "The Wolf and the Lion",
+      "6": "A Golden Crown",
+      "7": "You Win or You Die",
+      "8": "The Pointy End",
+      "9": "Baelor",
+      "10": "Fire and Blood"
+    },
+    "1421|5": {
+      "1": "Suddenly, Last Summer",
+      "2": "First Days",
+      "3": "Larry's Wife",
+      "4": "Farm Strong",
+      "5": "The Late Show",
+      "6": "The Help",
+      "7": "A Fair to Remember",
+      "8": "ClosetCon '13",
+      "9": "The Big Game",
+      "10": "The Old Man & the Tree",
+      "11": "And One to Grow On",
+      "12": "Under Pressure",
+      "13": "Three Dinners",
+      "14": "iSpy",
+      "15": "The Feud",
+      "16": "Spring-a-Ding-Fling",
+      "17": "Other People's Children",
+      "18": "Las Vegas",
+      "19": "A Hard Jay's Night",
+      "20": "Australia",
+      "21": "Sleeper",
+      "22": "Message Received",
+      "23": "The Wedding (1)",
+      "24": "The Wedding (2)"
+    }
+  }
+}

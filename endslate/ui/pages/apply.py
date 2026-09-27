@@ -16,7 +16,7 @@ from endslate.ui.delegate import human_size
 from endslate.ui.pages.base import Page
 from endslate.ui.theme import RADIUS_MD, SPACE
 from endslate.ui import icons
-from endslate.ui.widgets import Banner, Card, Divider, PageHeader, button, label
+from endslate.ui.widgets import Banner, Card, Clapstick, Divider, PageHeader, button, label
 
 
 class Metric(QWidget):
@@ -27,11 +27,14 @@ class Metric(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(2)
+        # Written like the fields on a slate: the label small and above, the
+        # figure large and below it.
+        self.caption = label(caption, "section", wrap=False)
         self.value = label("0", "metric", wrap=False)
-        self.caption = label(caption, "caption", wrap=False)
         self.setMinimumWidth(150)
-        layout.addWidget(self.value)
         layout.addWidget(self.caption)
+        layout.addSpacing(SPACE["xs"])
+        layout.addWidget(self.value)
 
     def set_value(self, text: str) -> None:
         self.value.setText(text)
@@ -71,7 +74,15 @@ class ApplyPage(Page):
         self.jellyfin.setVisible(False)
         self.add(self.jellyfin)
 
+        # The commit card is the slate itself, clapstick and all.
+        slate = QWidget()
+        slate_layout = QVBoxLayout(slate)
+        slate_layout.setContentsMargins(0, 0, 0, 0)
+        slate_layout.setSpacing(0)
+        slate_layout.addWidget(Clapstick(height=14, period=26, rounded=True))
         summary = Card()
+        summary.setObjectName("Slate")
+        slate_layout.addWidget(summary)
         metrics = QHBoxLayout()
         metrics.setSpacing(SPACE["2xl"])
         self.metric_renames = Metric("renamed or moved")
@@ -99,7 +110,7 @@ class ApplyPage(Page):
         self.apply_button.setEnabled(False)
         actions.addWidget(self.apply_button)
         summary.add_layout(actions)
-        self.add(summary)
+        self.add(slate)
 
         promises = Card()
         promises.add(label("Before you commit", "section"))
