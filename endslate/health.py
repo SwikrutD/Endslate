@@ -15,7 +15,7 @@ from typing import Callable, Iterable, Optional
 
 from endslate import subtitles as subs_mod
 from endslate.models import FileKind, Item, ScannedFile
-from endslate.planner import collect_items
+from endslate.planner import _extracted_videos, collect_items
 from endslate.scanner import LibraryScan
 
 ARCHIVE_EXTS = {".zip", ".rar", ".7z", ".tar", ".gz", ".iso"}
@@ -116,11 +116,12 @@ def _redundant_archives(scan: LibraryScan) -> list[Finding]:
     for f in scan.files:
         if f.path.suffix.lower() not in ARCHIVE_EXTS or f.size < ARCHIVE_MIN_BYTES:
             continue
-        siblings = [
-            v for v in scan.files
-            if v.kind is FileKind.VIDEO and _under(v.path, f.path.parent)
-        ]
+        # The planner's own test, so the two screens never disagree about an archive.
+        siblings = _extracted_videos(f, scan)
         if siblings:
+            in_downloads = scan.downloads_root is not None and _under(f.path, scan.downloads_root)
+            fate = ("It goes to _Quarantine when the next run organises those videos."
+                    if in_downloads else "Endslate will not touch it.")
             out.append(
                 Finding(
                     severity=WARNING,
@@ -128,7 +129,7 @@ def _redundant_archives(scan: LibraryScan) -> list[Finding]:
                     title=f"{f.path.name} looks already extracted",
                     detail=(
                         f"{_human(f.size)} archive with {len(siblings)} video file"
-                        f"{'s' if len(siblings) != 1 else ''} beside it. Endslate will not touch it."
+                        f"{'s' if len(siblings) != 1 else ''} beside it. {fate}"
                     ),
                     paths=[f.path],
                     bytes_involved=f.size,

@@ -45,6 +45,7 @@ MISC = {
     "repack", "proper", "internal", "limited", "esub", "esubs", "msub", "msubs", "subs", "sub",
     "subbed", "dubbed", "dual", "org", "untouched", "ds4k", "hq", "web-dl",
     "bollywood", "hollywood", "www", "torrent", "downloaded", "predvdrip", "nfrip",
+    "batch",
 }
 
 EDITIONS = [
@@ -103,13 +104,29 @@ _EPISODE_PATTERNS = [
 ]
 
 _SEASON_ONLY_PATTERNS = [
+    # "Mob Psycho 100 2nd Season - 03", the way anime releases name a sequel
+    # season. First, or "Season - 03" reads as season three.
+    re.compile(r"(?<![A-Za-z0-9])(?P<s>\d{1,2})(?:st|nd|rd|th)[\s._\-]+season(?![A-Za-z])", re.I),
     re.compile(r"(?<![A-Za-z0-9])s(?P<s>\d{1,2})(?![0-9eExX])", re.I),
-    re.compile(r"(?<![A-Za-z])season[\s._\-]*(?P<s>\d{1,2})(?![0-9])", re.I),
+    re.compile(r"(?<![A-Za-z])season(?:[\s._]+|-)?(?P<s>\d{1,2})(?![0-9])", re.I),
 ]
 
 _EPISODE_ONLY_PATTERNS = [
     re.compile(r"(?<![A-Za-z0-9])e(?:p|pisode)?[\s._\-]*(?P<e>\d{1,3})(?![0-9])", re.I),
 ]
+
+# Anime and fansub conventions. A release opens with its group in brackets and
+# numbers episodes from the start of the show: "[SubsPlease] Frieren - 12".
+_GROUP_RE = re.compile(r"^\s*[\[【](?P<g>[^\]】\[]{1,48})[\]】][\s._\-]*")
+_CRC_RE = re.compile(r"[\[(](?P<crc>[0-9A-Fa-f]{8})[\])]")
+_TVDBID_RE = re.compile(r"[\[{]\s*tvdb(?:id)?\s*[-=]\s*(?P<id>\d+)\s*[\]}]", re.I)
+_BATCH_RANGE_RE = re.compile(r"[\[(]\s*\d{1,4}\s*[-~]\s*\d{1,4}\s*[\])]")
+# " - 12", " - 1085", " - 01v2": the dash form every fansub group uses.
+_ABS_DASH_RE = re.compile(r"\s[-–]\s+(?:#|ep?\.?\s?)?(?P<e>\d{1,4})(?:v\d)?(?=$|[\s\[(._])", re.I)
+# "EP05", "Episode 12", or a bare "E12" where the context says anime.
+_ABS_EP_RE = re.compile(r"(?<![A-Za-z0-9])(?P<word>ep|episode|e|#)[\s._\-]?(?P<e>\d{1,4})(?:v\d)?(?![0-9])", re.I)
+# "Naruto Shippuden 001": a zero-padded number at the end is a count, not a sequel.
+_ABS_TRAILING_RE = re.compile(r"(?<![A-Za-z0-9])(?P<e>0\d{1,3})(?:v\d)?\s*$")
 
 _YEAR_BRACKETED = re.compile(r"[\[(](?P<y>19\d{2}|20\d{2})[\])]")
 _YEAR_BARE = re.compile(r"(?<![A-Za-z0-9])(?P<y>19\d{2}|20\d{2})(?![A-Za-z0-9])")
@@ -199,13 +216,24 @@ def detect_language(text: str) -> str:
     whole = norm_lang(normalized)
     if whole:
         return whole
-    parts = re.split(r"[\s._\-]+", normalized)
-    for tok in reversed(parts):
+    parts = [p for p in re.split(r"[\s._\-()\[\]]+", normalized) if p]
+    # Short codes are ordinary words in titles: "no" in Sousou no Frieren and
+    # Point of No Return read as Norwegian and the English subtitle went to
+    # quarantine. A two-letter code counts only as the last word, a three-letter
+    # one only in the last two, a full name anywhere but the start.
+    position = 0
+    for index in range(len(parts) - 1, -1, -1):
+        tok = parts[index]
         if tok in ("forced", "sdh", "cc", "hi"):
             continue
         code = norm_lang(tok)
-        if code:
+        if code and (
+            (len(tok) == 2 and position == 0)
+            or (len(tok) == 3 and position <= 1)
+            or (len(tok) > 3 and index > 0)
+        ):
             return code
+        position += 1
     return ""
 
 
@@ -217,13 +245,49 @@ def parse_season_from_folder(name: str) -> Optional[int]:
     return None
 
 
-def parse(name: str, *, is_dir: bool = False) -> ParsedName:
-    """Parse one file or folder name."""
+def _strip_release_group(raw: str, out: ParsedName) -> str:
+    """Take a leading "[Group]" off the name and remember it.
+
+    Left in place it became the start of the title: "SubsPlease] Frieren - 12".
+    A bracket that is the whole name, like "[REC] (2007)", is the title itself.
+    """
+    m = _GROUP_RE.match(raw)
+    if not m:
+        return raw
+    group = m.group("g").strip()
+    rest = raw[m.end():]
+    if not _clean_title(_YEAR_BRACKETED.sub("", rest)):
+        return raw
+    if re.fullmatch(r"(?:19|20)\d{2}|\d{3,4}p", group, re.I):
+        return raw
+    out.release_group = group
+    return rest
+
+
+def parse(name: str, *, is_dir: bool = False, anime: bool = False) -> ParsedName:
+    """Parse one file or folder name.
+
+    `anime` says the name comes from somewhere anime lives, so a bare episode
+    count ("Naruto 001", "E12") is read as one. Without it only the forms that
+    cannot be anything else are: a leading [Group] or a zero-padded " - 01".
+    """
     raw = name if is_dir else re.sub(r"\.[A-Za-z0-9]{1,5}$", "", name)
     out = ParsedName()
     out.is_sample = bool(_SAMPLE_RE.search(raw))
 
+    tm = _TVDBID_RE.search(raw)
+    if tm:
+        out.tvdb_id = int(tm.group("id"))
+        raw = (raw[:tm.start()] + " " + raw[tm.end():]).strip()
+    raw = _strip_release_group(raw, out)
+    crc = _CRC_RE.search(raw)
+    if crc:
+        raw = (raw[:crc.start()] + " " + raw[crc.end():]).rstrip()
+
     cuts: list[int] = []
+    batch = _BATCH_RANGE_RE.search(raw)
+    if batch:
+        cuts.append(batch.start())
 
     # 1. Episode marker wins over everything else.
     ep_end = None
@@ -252,6 +316,39 @@ def parse(name: str, *, is_dir: bool = False) -> ParsedName:
                     out.episode = int(m2.group("e"))
                     ep_end = m2.end()
                     break
+        if out.season is not None and out.episode is None and not is_dir:
+            # "Spy x Family S2 - 05", "Frieren 2nd Season - 03"
+            m2 = _ABS_DASH_RE.search(raw, m.end() if m else 0)
+            if m2:
+                out.episode = int(m2.group("e"))
+                ep_end = m2.end()
+
+    # 1b. No season anywhere: an absolute episode number, as anime counts them.
+    abs_span = None
+    if out.season is None and not is_dir:
+        fansub = anime or bool(out.release_group)
+        for m3 in _ABS_DASH_RE.finditer(raw):
+            if fansub or m3.group("e").startswith("0"):
+                abs_span = m3
+                break
+        if abs_span is None:
+            for m3 in _ABS_EP_RE.finditer(raw):
+                if m3.group("word").lower() in ("ep", "episode") or fansub:
+                    abs_span = m3
+                    break
+        if abs_span is None and anime:
+            head = raw
+            noise = _token_noise_spans(raw, hard_only=True)
+            if noise:
+                head = raw[:noise[0][0]]
+            head = re.sub(r"[\s._\-\[(]+$", "", head)
+            m3 = _ABS_TRAILING_RE.search(head)
+            if m3 and m3.start() > 0:
+                abs_span = m3
+        if abs_span is not None:
+            out.absolute = int(abs_span.group("e"))
+            cuts.append(abs_span.start())
+            ep_end = abs_span.end()
 
     # 2. Year: a bracketed one is a deliberate statement, a bare one is a guess.
     ym = _YEAR_BRACKETED.search(raw)
@@ -263,6 +360,9 @@ def parse(name: str, *, is_dir: bool = False) -> ParsedName:
             value = int(ym.group("y"))
             # A year cannot be the whole title unless nothing else is there.
             if ym.start() == 0 and len(raw) > 6:
+                continue
+            # "One Piece - 1085" is an episode; so is "Show - 2001" in a fansub name.
+            if abs_span is not None and abs_span.start() <= ym.start() < abs_span.end():
                 continue
             out.year = value
             cuts.append(ym.start())
@@ -318,6 +418,13 @@ def parse(name: str, *, is_dir: bool = False) -> ParsedName:
             out.source = {"webdl": "WEB-DL", "web": "WEB", "bluray": "BluRay"}.get(token, token.upper())
             break
     out.language = detect_language(raw) if not is_dir else ""
+    # A bracketed group plus an episode number is a fansub release. A site
+    # name in the brackets is a western scene release that borrowed the habit.
+    out.anime_hint = bool(
+        out.release_group
+        and not _SITE_RE.search(out.release_group)
+        and (out.has_episode_number or crc is not None)
+    )
     return out
 
 
@@ -336,6 +443,9 @@ def merge(file_parse: ParsedName, folder_parse: ParsedName) -> ParsedName:
         out.edition = folder_parse.edition
     if not out.part:
         out.part = folder_parse.part
+    if out.tvdb_id is None:
+        out.tvdb_id = folder_parse.tvdb_id
+    out.anime_hint = out.anime_hint or folder_parse.anime_hint
     # A folder title that carries a year is usually the more deliberate name.
     if folder_parse.year is not None and folder_parse.title and len(folder_parse.title) >= len(out.title):
         out.title = folder_parse.title

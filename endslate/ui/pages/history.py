@@ -15,13 +15,13 @@ STATE_TONE = {"complete": "green", "reverted": "neutral", "interrupted": "amber"
 
 class RunCard(Card):
     def __init__(self, info: RunInfo, on_undo, parent=None):
-        super().__init__(padding=SPACE["lg"], parent=parent)
+        super().__init__(padding=SPACE["xl"], parent=parent)
         self.info = info
         self.body.setSpacing(SPACE["sm"])
 
         top = QHBoxLayout()
         top.setSpacing(SPACE["md"])
-        title = label(info.started.replace("T", "  ") or info.run_id, "subtitle")
+        title = label(info.started.replace("T", "  ") or info.run_id, "heading")
         top.addWidget(title)
         state = "reverted" if info.reverted else ("complete" if info.closed else "interrupted")
         self.pill = Pill(state, STATE_TONE.get(state, "neutral"))
@@ -54,7 +54,7 @@ class HistoryPage(Page):
         self.list_holder = QWidget()
         self.list_layout = QVBoxLayout(self.list_holder)
         self.list_layout.setContentsMargins(0, 0, 0, 0)
-        self.list_layout.setSpacing(SPACE["md"])
+        self.list_layout.setSpacing(SPACE["xl"])
 
         self.empty = EmptyState(
             "history",
@@ -76,6 +76,7 @@ class HistoryPage(Page):
                 item.widget().deleteLater()
         for info in runs:
             self.list_layout.addWidget(RunCard(info, on_undo))
+        self.list_layout.addStretch(1)
         self.stack.setCurrentWidget(self.list_holder if runs else self.empty)
         self.header.set_subtitle(
             f"{len(runs)} run{'s' if len(runs) != 1 else ''} recorded. Undo replays one backwards, "

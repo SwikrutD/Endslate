@@ -20,6 +20,7 @@ from endslate.models import (
     PlanEntry,
     ScannedFile,
 )
+from endslate.matcher import offline_confidence
 from endslate.parser import SUBTITLE_EXTS as SUBTITLE_SUFFIXES, merge, parse
 from endslate.presets import Preset, build_tokens, render
 from endslate.sanitize import MAX_PATH, sanitize_component, shorten_to_fit
@@ -27,6 +28,18 @@ from endslate.scanner import QUARANTINE_DIRNAME, LibraryScan
 
 BIG_ARCHIVE_EXTS = {".zip", ".rar", ".7z", ".tar", ".gz", ".iso"}
 BIG_ARCHIVE_BYTES = 1_000_000_000
+
+
+@dataclass
+class Dirs:
+    """Where each kind of item lands."""
+
+    movies: Path
+    shows: Path
+    anime: Path
+
+    def for_item(self, item: Item) -> Path:
+        return {"movies": self.movies, "shows": self.shows, "anime": self.anime}[item.destination]
 
 
 @dataclass
@@ -59,6 +72,8 @@ def build_plan(
     else:
         for item in items:
             item.confidence = _offline_confidence(item)
+            if item.is_tv and item.parsed.absolute is not None and not item.parsed.is_episode:
+                item.note = ABSOLUTE_NOTE.format(n=item.parsed.absolute)
 
     sub_files = [
         f for f in scan.files
@@ -68,8 +83,12 @@ def build_plan(
     for sub_path, item in paired.items():
         item.subtitles.append(_file_for(scan, sub_path))
 
-    movies_dir = scan.root / (preset.movies_dir if options.rename_top_level_folders else _existing_name(scan.movies_root, preset.movies_dir))
-    shows_dir = scan.root / (preset.shows_dir if options.rename_top_level_folders else _existing_name(scan.shows_root, preset.shows_dir))
+    rename = options.rename_top_level_folders
+    dirs = Dirs(
+        movies=scan.root / (preset.movies_dir if rename else _existing_name(scan.movies_root, preset.movies_dir)),
+        shows=scan.root / (preset.shows_dir if rename else _existing_name(scan.shows_root, preset.shows_dir)),
+        anime=scan.root / (preset.anime_dir if rename else _existing_name(scan.anime_root, preset.anime_dir)),
+    )
 
     folder_per_movie = preset.folder_per_movie if options.folder_per_movie is None else options.folder_per_movie
 
@@ -78,23 +97,32 @@ def build_plan(
     for index, item in enumerate(items):
         if progress is not None and index % 25 == 0:
             progress("planning", index, total)
-        entry = _entry_for(item, preset, options, movies_dir, shows_dir, folder_per_movie)
+        entry = _entry_for(item, preset, options, dirs, folder_per_movie)
         plan.entries.append(entry)
         if entry.bucket is Bucket.PLANNED:
             target = entry.target_path
             if target is not None:
                 targets[target].append(entry)
 
-    _resolve_collisions(plan, targets, preset, options, movies_dir, shows_dir, folder_per_movie)
+    _resolve_collisions(plan, targets, preset, options, dirs, folder_per_movie)
 
     if options.quarantine_junk:
         plan.entries.extend(_junk_entries(scan, junk_dirs, quarantine_root))
         if options.english_only_subtitles:
             kept = {op.src for entry in plan.entries for op in entry.ops
                     if op.kind is OpKind.MOVE and op.src is not None and op.src.suffix.lower() in SUBTITLE_SUFFIXES}
-            plan.entries.extend(_foreign_subtitle_entries(items, options, quarantine_root, scan.root, kept))
+            # Only a subtitle that lost to a better track of the same language
+            # is redundant. One that is already in place, or belongs to a file
+            # still waiting on you, stays where it is.
+            redundant = {path for entry in plan.entries
+                         if entry.bucket in (Bucket.PLANNED, Bucket.NOOP)
+                         for path in entry.dropped_subtitles}
+            plan.entries.extend(_foreign_subtitle_entries(items, options, quarantine_root, scan.root,
+                                                          kept, redundant))
 
     for sub in orphan_subs:
+        if scan.downloads_root is not None and _under_any(sub.path, [scan.downloads_root]):
+            continue
         plan.entries.append(
             PlanEntry(item=None, bucket=Bucket.SKIPPED, ops=[Operation(OpKind.MOVE, sub.path, None)],
                       reason="subtitle matched no video", selected=False)
@@ -134,7 +162,7 @@ def _under_any(path: Path, directories: list[Path]) -> bool:
 def _whole_junk_dirs(scan: LibraryScan) -> list[Path]:
     """Top-level folders holding no video and no subtitle anywhere beneath."""
     out: list[Path] = []
-    for root in (scan.movies_root, scan.shows_root):
+    for root in (scan.movies_root, scan.shows_root, scan.anime_root):
         if root is None:
             continue
         for child in scan.subdirs(root):
@@ -147,13 +175,26 @@ def _whole_junk_dirs(scan: LibraryScan) -> list[Path]:
     return out
 
 
-def _ancestor_parses(path: Path, stop_at: Optional[Path]) -> list[ParsedName]:
+def _ancestor_parses(path: Path, stop_at: Optional[Path], anime: bool = False) -> list[ParsedName]:
     out: list[ParsedName] = []
     current = path.parent
     while stop_at is not None and current != stop_at and current != current.parent:
-        out.append(parse(current.name, is_dir=True))
+        out.append(parse(current.name, is_dir=True, anime=anime))
         current = current.parent
     return out
+
+
+def _root_of(path: Path, scan: LibraryScan) -> tuple[str, Optional[Path]]:
+    """Which top-level folder a file sits in, and that folder."""
+    for name, root in (
+        ("anime", scan.anime_root),
+        ("shows", scan.shows_root),
+        ("downloads", scan.downloads_root),
+        ("movies", scan.movies_root),
+    ):
+        if root is not None and _under_any(path, [root]):
+            return name, root
+    return "", scan.movies_root
 
 
 def _collect_items(scan: LibraryScan, junk_dirs: list[Path]) -> list[Item]:
@@ -161,22 +202,51 @@ def _collect_items(scan: LibraryScan, junk_dirs: list[Path]) -> list[Item]:
     for f in scan.files:
         if f.kind is not FileKind.VIDEO or _under_any(f.path, junk_dirs):
             continue
-        is_tv = scan.shows_root is not None and _under_any(f.path, [scan.shows_root])
-        stop = scan.shows_root if is_tv else scan.movies_root
-        parsed = parse(f.path.name)
-        chain = _ancestor_parses(f.path, stop)
-        for ancestor in chain:
+        where, stop = _root_of(f.path, scan)
+        in_anime = where == "anime"
+        parsed = parse(f.path.name, anime=in_anime)
+        for ancestor in _ancestor_parses(f.path, stop, anime=in_anime):
             parsed = merge(parsed, ancestor)
+
+        # Where a file sits decides what it is. Shows holds episodes. Anime
+        # holds episodes and the odd film, which belongs with the films.
+        # Downloads holds anything, so the name decides: a fansub release is
+        # anime, an episode marker is a show, everything else is a film.
+        is_anime = False
+        if where == "shows":
+            is_tv = True
+            # A fansub file numbered from the start of the show cannot be
+            # placed in a season without TheTVDB. Anything else stays on TMDB.
+            is_anime = parsed.absolute is not None and not parsed.is_episode
+            section = "shows"
+        elif where == "anime":
+            is_tv = parsed.has_episode_number or parsed.season is not None
+            is_anime = is_tv
+            section = "anime" if is_tv else "movies"
+        elif where == "downloads":
+            is_tv = parsed.has_episode_number
+            is_anime = is_tv and (parsed.anime_hint or not parsed.is_episode)
+            section = ("anime" if is_tv and parsed.anime_hint else "shows") if is_tv else "movies"
+        else:
+            is_tv = False
+            section = "movies"
+
         show_hint = ""
-        if is_tv and scan.shows_root is not None:
-            relative = f.path.relative_to(scan.shows_root)
-            show_hint = relative.parts[0] if len(relative.parts) > 1 else parsed.title
-            show_parse = parse(show_hint, is_dir=True)
-            if show_parse.title:
-                parsed.title = show_parse.title
-            if parsed.year is None and show_parse.year:
-                parsed.year = show_parse.year
-        items.append(Item(video=f, is_tv=is_tv, show_hint=show_hint or parsed.title, parsed=parsed))
+        if is_tv and stop is not None:
+            relative = f.path.relative_to(stop)
+            if len(relative.parts) > 1:
+                show_hint = relative.parts[0]
+                show_parse = parse(show_hint, is_dir=True, anime=in_anime)
+                if show_parse.title:
+                    parsed.title = show_parse.title
+                if parsed.year is None and show_parse.year:
+                    parsed.year = show_parse.year
+                if parsed.tvdb_id is None:
+                    parsed.tvdb_id = show_parse.tvdb_id
+            else:
+                show_hint = parsed.title
+        items.append(Item(video=f, is_tv=is_tv, is_anime=is_anime, section=section,
+                          show_hint=show_hint or parsed.title, parsed=parsed))
     return items
 
 
@@ -185,27 +255,23 @@ def collect_items(scan: LibraryScan) -> list[Item]:
     return _collect_items(scan, _whole_junk_dirs(scan))
 
 
-def _offline_confidence(item: Item) -> Confidence:
-    if not item.parsed.title:
-        return Confidence.NONE
-    if item.is_tv:
-        if item.parsed.season is not None and item.parsed.episode is not None:
-            return Confidence.HIGH
-        return Confidence.LOW
-    if item.parsed.year:
-        return Confidence.HIGH
-    return Confidence.LOW
+_offline_confidence = offline_confidence
 
 
 # --------------------------------------------------------------------------- targets
+
+
+ABSOLUTE_NOTE = (
+    "episode {n} is counted from the start of the show; TheTVDB is needed to "
+    "place it in a season"
+)
 
 
 def _entry_for(
     item: Item,
     preset: Preset,
     options: Options,
-    movies_dir: Path,
-    shows_dir: Path,
+    dirs: Dirs,
     folder_per_movie: bool,
     disambiguator: str = "",
 ) -> PlanEntry:
@@ -215,13 +281,18 @@ def _entry_for(
         return PlanEntry(item=item, bucket=bucket, reason=reason, selected=False)
 
     if item.is_tv and (item.parsed.season is None or item.parsed.episode is None):
-        return PlanEntry(item=item, bucket=Bucket.NEEDS_YOU, reason="no season or episode number", selected=False)
+        reason = "no season or episode number"
+        if item.parsed.absolute is not None:
+            reason = item.note or ABSOLUTE_NOTE.format(n=item.parsed.absolute)
+        return PlanEntry(item=item, bucket=Bucket.NEEDS_YOU, reason=reason, selected=False)
 
     tokens = build_tokens(
         title=item.title,
         year=item.year,
         season=item.parsed.season,
         episode=item.parsed.episode,
+        episode_end=item.parsed.episode_end,
+        absolute=item.parsed.absolute,
         episode_title=item.episode_title,
         edition=item.parsed.edition,
         part=item.parsed.part,
@@ -229,20 +300,23 @@ def _entry_for(
         source=item.parsed.source,
         tmdb_id=item.meta.tmdb_id,
         imdb_id=item.meta.imdb_id,
+        tvdb_id=item.meta.tvdb_id or item.parsed.tvdb_id,
         ext=item.video.path.suffix.lstrip("."),
     )
 
+    root = dirs.for_item(item)
     if item.is_tv:
-        show_folder = sanitize_component(render(preset.movie_folder, tokens))
+        template = preset.anime_folder if item.destination == "anime" else preset.movie_folder
+        show_folder = sanitize_component(render(template, tokens))
         season_folder = sanitize_component(render(preset.season_folder, tokens))
-        directory = shows_dir / show_folder / season_folder
+        directory = root / show_folder / season_folder
         stem = sanitize_component(render(preset.episode_file, tokens))
     else:
         stem = sanitize_component(render(preset.movie_file, tokens))
         if folder_per_movie:
-            directory = movies_dir / sanitize_component(render(preset.movie_folder, tokens))
+            directory = root / sanitize_component(render(preset.movie_folder, tokens))
         else:
-            directory = movies_dir
+            directory = root
 
     if disambiguator:
         stem = sanitize_component(f"{stem} - {disambiguator}")
@@ -255,16 +329,19 @@ def _entry_for(
         ops.append(Operation(OpKind.MKDIR, None, directory, reason="destination folder"))
         ops.append(Operation(OpKind.MOVE, item.video.path, target, size=item.video.size, reason="video"))
 
+    dropped: list[Path] = []
     for sub, code, sub_target in _subtitle_targets(item, options, directory, stem):
         if sub_target is None:
+            dropped.append(sub.path)
             continue
         if sub_target != sub.path:
             ops.append(Operation(OpKind.MOVE, sub.path, sub_target, size=sub.size, reason=f"subtitle ({code})"))
 
     if not ops:
-        return PlanEntry(item=item, bucket=Bucket.NOOP, reason="already correctly named", selected=False)
+        return PlanEntry(item=item, bucket=Bucket.NOOP, reason="already correctly named", selected=False,
+                         dropped_subtitles=dropped)
 
-    entry = PlanEntry(item=item, bucket=Bucket.PLANNED, ops=ops)
+    entry = PlanEntry(item=item, bucket=Bucket.PLANNED, ops=ops, dropped_subtitles=dropped)
     if len(str(target)) >= MAX_PATH:
         entry.bucket = Bucket.NEEDS_YOU
         entry.selected = False
@@ -283,7 +360,7 @@ def _disambiguators(items: list[Item]) -> Optional[list[str]]:
     return None
 
 
-def _resolve_collisions(plan, targets, preset, options, movies_dir, shows_dir, folder_per_movie) -> None:
+def _resolve_collisions(plan, targets, preset, options, dirs, folder_per_movie) -> None:
     """Two files wanting one name are either different cuts or a real duplicate."""
     for target, entries in list(targets.items()):
         if len(entries) < 2:
@@ -292,10 +369,11 @@ def _resolve_collisions(plan, targets, preset, options, movies_dir, shows_dir, f
         labels = _disambiguators(items) if len(items) == len(entries) else None
         if labels:
             for entry, label in zip(entries, labels):
-                rebuilt = _entry_for(entry.item, preset, options, movies_dir, shows_dir,
+                rebuilt = _entry_for(entry.item, preset, options, dirs,
                                      folder_per_movie, disambiguator=label)
                 entry.ops = rebuilt.ops
                 entry.bucket = rebuilt.bucket
+                entry.dropped_subtitles = rebuilt.dropped_subtitles
                 entry.reason = f"same name as another file, kept apart by {label}"
             continue
         for entry in entries:
@@ -336,11 +414,6 @@ def _subtitle_targets(item: Item, options: Options, directory: Path, stem: str):
     return results
 
 
-def _redundant_subtitle_entries(items: list[Item], options: Options, quarantine_root: Path, root: Path,
-                                keepers: dict[Path, set]) -> list[PlanEntry]:
-    return []
-
-
 def _quarantine_target(path: Path, root: Path, quarantine_root: Path) -> Path:
     try:
         relative = path.relative_to(root)
@@ -362,8 +435,28 @@ def _junk_entries(scan: LibraryScan, junk_dirs: list[Path], quarantine_root: Pat
                 reason="folder holds no media",
             )
         )
+    # Downloads is a staging area. Once an archive has been extracted beside
+    # its videos, keep the organized videos and quarantine the bulky source
+    # archive. An archive with no extracted video remains available for later.
+    if scan.downloads_root is not None:
+        for archive in scan.files:
+            if archive.path.suffix.lower() not in BIG_ARCHIVE_EXTS:
+                continue
+            if not _in_downloads(archive.path, scan) or not _extracted_videos(archive, scan):
+                continue
+            target = _quarantine_target(archive.path, scan.root, quarantine_root)
+            out.append(
+                PlanEntry(
+                    item=None,
+                    bucket=Bucket.JUNK,
+                    ops=[Operation(OpKind.QUARANTINE, archive.path, target,
+                                   size=archive.size, reason="archive has extracted video files")],
+                    reason="archive has extracted video files",
+                )
+            )
     for f in scan.files:
-        if f.kind is not FileKind.JUNK or _under_any(f.path, junk_dirs):
+        if (f.kind is not FileKind.JUNK or _under_any(f.path, junk_dirs)
+                or (scan.downloads_root is not None and _under_any(f.path, [scan.downloads_root]))):
             continue
         target = _quarantine_target(f.path, scan.root, quarantine_root)
         out.append(
@@ -378,25 +471,33 @@ def _junk_entries(scan: LibraryScan, junk_dirs: list[Path], quarantine_root: Pat
 
 
 def _foreign_subtitle_entries(items: list[Item], options: Options, quarantine_root: Path, root: Path,
-                              kept: set) -> list[PlanEntry]:
+                              kept: set, redundant: set) -> list[PlanEntry]:
+    """Subtitles in another language, and English ones a better track replaced.
+
+    Every correctly named subtitle used to land here: one that was already in
+    place had no move, so nothing marked it as kept, and Endslate proposed
+    sweeping the only subtitle a film had into _Quarantine.
+    """
     out: list[PlanEntry] = []
     for item in items:
         for sub in item.subtitles:
-            language = subs_mod.detect_language(sub)
             if sub.path in kept:
                 continue
-            reason_lang = language or "duplicate English"
-            if True:
-                target = _quarantine_target(sub.path, root, quarantine_root)
-                out.append(
-                    PlanEntry(
-                        item=None,
-                        bucket=Bucket.JUNK,
-                        ops=[Operation(OpKind.QUARANTINE, sub.path, target, size=sub.size, reason=f"{reason_lang} subtitle")],
-                        reason=(f"{language} subtitle, English-only is on" if language and language != options.subtitle_language
-                                else "redundant subtitle, another track already covers this language"),
-                    )
+            language = subs_mod.detect_language(sub)
+            foreign = bool(language) and language != options.subtitle_language
+            if not foreign and sub.path not in redundant:
+                continue
+            target = _quarantine_target(sub.path, root, quarantine_root)
+            out.append(
+                PlanEntry(
+                    item=None,
+                    bucket=Bucket.JUNK,
+                    ops=[Operation(OpKind.QUARANTINE, sub.path, target, size=sub.size,
+                                   reason=f"{language or 'duplicate English'} subtitle")],
+                    reason=(f"{language} subtitle, English-only is on" if foreign
+                            else "redundant subtitle, another track already covers this language"),
                 )
+            )
     return out
 
 
@@ -477,19 +578,44 @@ def keep_largest_duplicates(plan: Plan) -> int:
     return resolved
 
 
+def _in_downloads(path: Path, scan: LibraryScan) -> bool:
+    return scan.downloads_root is not None and _under_any(path, [scan.downloads_root])
+
+
+def _extracted_videos(archive: ScannedFile, scan: LibraryScan) -> list[ScannedFile]:
+    """The videos that came out of this archive, as far as the names can tell.
+
+    An archive in its own folder owns every video in that folder. One lying
+    loose in Downloads owns only the videos with its title: before this, any
+    video anywhere in Downloads sent every loose archive to quarantine, and an
+    archive outside Downloads was swept up the moment a Downloads folder existed.
+    """
+    videos = [
+        v for v in scan.files
+        if v.kind is FileKind.VIDEO and _under_any(v.path, [archive.path.parent])
+    ]
+    if archive.path.parent != scan.downloads_root:
+        return videos
+    from endslate.matcher import normalize_title
+
+    wanted = normalize_title(parse(archive.path.name).title)
+    if not wanted:
+        return []
+    return [v for v in videos if normalize_title(parse(v.path.name).title) == wanted]
+
+
 def _notes(scan: LibraryScan) -> list[str]:
     notes: list[str] = []
     for f in scan.files:
         if f.path.suffix.lower() in BIG_ARCHIVE_EXTS and f.size >= BIG_ARCHIVE_BYTES:
-            siblings = [
-                v for v in scan.files
-                if v.kind is FileKind.VIDEO and _under_any(v.path, [f.path.parent])
-            ]
+            siblings = _extracted_videos(f, scan)
             gb = f.size / 1_000_000_000
             if siblings:
+                in_downloads = _in_downloads(f.path, scan)
+                action = "will be moved to _Quarantine after the extracted media is organized" if in_downloads else "left untouched"
                 notes.append(
                     f"{f.path.name} is {gb:.1f} GB and {len(siblings)} video files sit beside it, "
-                    "so the archive looks already extracted. Left untouched."
+                    f"so the archive looks already extracted; {action}."
                 )
             else:
                 notes.append(f"{f.path.name} is {gb:.1f} GB and nothing beside it is extracted. Left untouched.")

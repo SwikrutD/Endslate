@@ -35,6 +35,7 @@ from endslate.ui.widgets import (
     StatTile,
     button,
     label,
+    raised_control,
 )
 
 TILES = [
@@ -76,7 +77,7 @@ class ReviewPage(Page):
         tiles_holder = QWidget()
         tiles = QHBoxLayout(tiles_holder)
         tiles.setContentsMargins(0, 0, 0, 0)
-        tiles.setSpacing(SPACE["sm"])
+        tiles.setSpacing(SPACE["lg"])
         self.tiles: dict[str, StatTile] = {}
         for key, title, tone in TILES:
             tile = StatTile(key, title, tone)
@@ -87,15 +88,16 @@ class ReviewPage(Page):
 
         # ----------------------------------------------------------- toolbar
         toolbar = QHBoxLayout()
-        toolbar.setSpacing(SPACE["sm"])
+        toolbar.setSpacing(SPACE["md"])
         self.search = SearchField("Search titles and paths")
-        self.search.setMinimumWidth(200)
+        self.search.setMinimumWidth(320)
         self.search.textChanged.connect(self._search_changed)
         toolbar.addWidget(self.search)
 
         self.sort = QComboBox()
         self.sort.addItems([f"Sort by {key.lower()}" for key in SORT_KEYS])
-        self.sort.setMinimumWidth(168)
+        self.sort.setMinimumWidth(180)
+        raised_control(self.sort)
         self.sort.currentIndexChanged.connect(self._sort_changed)
         self.sort.setToolTip("Change the order of the list")
         toolbar.addWidget(self.sort)
@@ -156,7 +158,10 @@ class ReviewPage(Page):
         self.stack.addWidget(self.table)
         self.stack.addWidget(self.empty)
         self.stack.setCurrentWidget(self.empty)
-        self.add(self.stack, 1)
+        # The list sits on one raised sheet; its rows are cut into it.
+        self.sheet = Card(padding=SPACE["md"])
+        self.sheet.add(self.stack, 1)
+        self.add(self.sheet, 1)
 
         self.notes = Banner("blue", "info", "")
         self.notes.setVisible(False)
@@ -189,7 +194,9 @@ class ReviewPage(Page):
         for key, tile in self.tiles.items():
             tile.set_count(counts.get(key, 0))
         planned = counts.get("planned", 0)
-        total_ops = len(plan.selected_operations())
+        # The same number the Apply page shows. Counting the folders it creates
+        # as well made the two screens disagree about one plan.
+        total_ops = plan.change_count()
         self.header.set_subtitle(
             f"{planned:,} changes ready, {counts.get('needs_you', 0):,} waiting on you, "
             f"{counts.get('noop', 0):,} already correct"

@@ -27,7 +27,15 @@ def window(qapp, tmp_path, monkeypatch):
     monkeypatch.setattr(config_mod, "app_dir", lambda: tmp_path)
     from endslate.ui.app import MainWindow
 
-    return MainWindow()
+    made = MainWindow()
+    yield made
+    # Left alive, every window from every earlier test is restyled on each
+    # theme change, and the suite slows with each one.
+    from PySide6.QtCore import QCoreApplication, QEvent
+
+    made.close()
+    made.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
 
 
 def test_every_screen_renders(window, qapp):
@@ -209,3 +217,55 @@ def test_the_duplicates_view_offers_a_way_out(window, qapp, tmp_path):
     qapp.processEvents()
     assert not window.plan.by_bucket(Bucket.DUPLICATE)
     assert window.review_page.tiles["duplicate"].value.text() == "0"
+
+
+def test_the_tvdb_key_is_saved_with_the_settings(window, qapp):
+    window.settings_page.tvdb_key.setText("a-tvdb-key")
+    window.settings_page.tvdb_pin.setText("1234")
+    window.save_settings()
+    from endslate.config import load_config
+
+    config = load_config()
+    assert config.tvdb_api_key == "a-tvdb-key" and config.tvdb_pin == "1234"
+    assert window.tvdb() is not None
+
+
+def test_a_refused_apply_keeps_the_plan(window, qapp, library):
+    """Preflight refused, nothing moved, and the review was thrown away anyway."""
+    from endslate.executor import Problem, Result
+
+    plan = build_plan(scan(library), builtin("Jellyfin"), Options())
+    window.plan = plan
+    window.review_page.set_plan(plan)
+    window._apply_done(Result(failures=[Problem(library, "target already exists")]))
+    qapp.processEvents()
+    assert window.plan is plan
+    assert window.review_page.plan is plan
+    assert "Nothing was moved" in window.apply_page.result.text.text()
+
+
+def test_a_second_scan_waits_for_the_first(window, qapp, tmp_path):
+    """F5 during a scan started another job over the running one."""
+    class Running:
+        def isRunning(self):
+            return True
+
+    window.job = Running()
+    window.library_page.dropzone.set_path(str(tmp_path))
+    window.start_scan()
+    assert isinstance(window.job, Running)
+
+
+def test_switches_and_moulded_widgets_follow_their_state(window, qapp):
+    from endslate.ui import neu
+
+    row = window.library_page.english_only
+    before = row.isChecked()
+    row.check.click()
+    qapp.processEvents()
+    assert row.isChecked() is not before
+    tile = window.review_page.tiles["junk"]
+    tile.setChecked(True)
+    assert neu._target_level(tile, neu.spec_of(tile)) == -1.0
+    button = window.library_page.scan_button
+    assert neu.spec_of(button) is not None and neu.spec_of(button).fill == "accent"

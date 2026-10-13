@@ -9,18 +9,18 @@ from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
     QHBoxLayout,
-    QLabel,
     QVBoxLayout,
     QWidget,
 )
 
 from endslate.presets import BUILTIN_PRESETS, Preset, build_tokens, render
-from endslate.ui import icons, theme
+from endslate.ui import neu, theme
 from endslate.ui.pages.base import Page
-from endslate.ui.theme import RADIUS_LG, SPACE
+from endslate.ui.theme import RADIUS_CARD, SPACE
 from endslate.ui.widgets import (
     Card,
     Divider,
+    IconWell,
     PageHeader,
     PresetCard,
     ToggleRow,
@@ -28,9 +28,11 @@ from endslate.ui.widgets import (
     label,
 )
 
+EMPTY_DETAIL = "Drop it here, or browse. The folder that holds Movies, Shows and Anime."
+
 
 class Dropzone(QFrame):
-    """Where the library folder is chosen. Takes a dropped folder too."""
+    """Where the library folder is chosen: a well pressed into the page. Takes a drop."""
 
     chosen = Signal(str)
 
@@ -38,22 +40,22 @@ class Dropzone(QFrame):
         super().__init__(parent)
         self.setObjectName("Dropzone")
         self.setAcceptDrops(True)
-        self.setMinimumHeight(112)
+        self.setMinimumHeight(124)
         self.path = ""
+        neu.style(self, "inset", radius=RADIUS_CARD, depth="deep")
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(SPACE["xl"], SPACE["lg"], SPACE["xl"], SPACE["lg"])
         layout.setSpacing(SPACE["lg"])
 
-        self.glyph = QLabel()
-        self.glyph.setFixedSize(34, 34)
+        self.glyph = IconWell("folder", size=56, glyph=24, tone="text_faint", raised=True)
         layout.addWidget(self.glyph, 0, Qt.AlignVCenter)
 
         text = QVBoxLayout()
-        text.setSpacing(2)
+        text.setSpacing(3)
         text.setAlignment(Qt.AlignVCenter)
-        self.title = label("Choose your media folder", "subtitle", wrap=False)
-        self.detail = label("Drop it here, or browse. The folder that holds Movies and TV Shows.", "muted", wrap=False)
+        self.title = label("Choose your media folder", "heading", wrap=False)
+        self.detail = label(EMPTY_DETAIL, "muted", wrap=False)
         self._detail_text = self.detail.text()
         text.addWidget(self.title)
         text.addWidget(self.detail)
@@ -73,14 +75,14 @@ class Dropzone(QFrame):
             self.browse.setText("Change")
         else:
             self.title.setText("Choose your media folder")
-            self._detail_text = "Drop it here, or browse. The folder that holds Movies and TV Shows."
+            self._detail_text = EMPTY_DETAIL
             self.detail.setProperty("role", "muted")
             theme.apply_role_font(self.detail, "muted")
             self.browse.setText("Browse")
         self._elide()
         self.setProperty("chosen", "true" if path else "false")
-        self.style().unpolish(self)
-        self.style().polish(self)
+        self.style().unpolish(self.detail)
+        self.style().polish(self.detail)
         self.restyle()
 
     def _elide(self) -> None:
@@ -93,17 +95,11 @@ class Dropzone(QFrame):
         self._elide()
 
     def restyle(self) -> None:
-        palette = theme.active()
-        name = "folder" if not self.path else "film"
-        colour = palette.accent if self.path else palette.text_faint
-        self.glyph.setPixmap(icons.pixmap(name, colour, 34))
         if self.path:
-            self.setStyleSheet(
-                f"#Dropzone {{ background: {palette.surface}; border: 1px solid {palette.line};"
-                f" border-radius: {RADIUS_LG}px; }}"
-            )
+            self.glyph.set_icon("film", "accent")
         else:
-            self.setStyleSheet("")
+            self.glyph.set_icon("folder", "text_faint")
+        self.setStyleSheet("#Dropzone { background: transparent; border: none; }")
 
     def _browse(self) -> None:
         start = self.path or str(Path.home())
@@ -113,22 +109,20 @@ class Dropzone(QFrame):
 
     # ------------------------------------------------------------ drag & drop
 
+    def _set_hot(self, hot: bool) -> None:
+        neu.style(self, "inset", radius=RADIUS_CARD, depth="deep", ring=hot)
+        self.setProperty("hot", "true" if hot else "false")
+
     def dragEnterEvent(self, event):  # noqa: N802
         if event.mimeData().hasUrls():
             event.acceptProposedAction()
-            self.setProperty("hot", "true")
-            self.style().unpolish(self)
-            self.style().polish(self)
+            self._set_hot(True)
 
     def dragLeaveEvent(self, event):  # noqa: N802
-        self.setProperty("hot", "false")
-        self.style().unpolish(self)
-        self.style().polish(self)
+        self._set_hot(False)
 
     def dropEvent(self, event):  # noqa: N802
-        self.setProperty("hot", "false")
-        self.style().unpolish(self)
-        self.style().polish(self)
+        self._set_hot(False)
         for url in event.mimeData().urls():
             path = Path(url.toLocalFile())
             if path.is_dir():
@@ -160,27 +154,28 @@ class LibraryPage(Page):
         grid_holder = QWidget()
         self.grid = QGridLayout(grid_holder)
         self.grid.setContentsMargins(0, 0, 0, 0)
-        self.grid.setSpacing(SPACE["md"])
+        self.grid.setHorizontalSpacing(SPACE["xl"])
+        self.grid.setVerticalSpacing(SPACE["xl"])
         self.preset_cards: list[PresetCard] = []
         self.add(grid_holder)
 
         self.add(label("Options", "section"))
-        options = Card(padding=SPACE["lg"])
+        options = Card(padding=SPACE["xl"])
         self.folder_per_movie = ToggleRow(
             "Give every movie its own folder",
-"Fight Club (1999)\\Fight Club (1999).mkv, rather than a bare file.",
+            "Fight Club (1999)\\Fight Club (1999).mkv, rather than a bare file.",
         )
         self.english_only = ToggleRow(
             "Keep English subtitles only",
-"Other languages go to _Quarantine. Nothing is deleted.",
+            "Other languages go to _Quarantine. Nothing is deleted.",
         )
         self.rename_roots = ToggleRow(
             "Rename the top-level folders",
-"TV Shows becomes Shows. Turn this off to leave the roots alone.",
+            "TV Shows becomes Shows. Turn this off to leave the roots alone.",
         )
         self.quarantine_junk = ToggleRow(
             "Sweep junk into _Quarantine",
-"Resource forks, release-site adverts, and folders holding no media.",
+            "Resource forks, release-site adverts, and folders holding no media.",
         )
         for index, row in enumerate(
             (self.folder_per_movie, self.english_only, self.rename_roots, self.quarantine_junk)
@@ -204,6 +199,8 @@ class LibraryPage(Page):
         self.preset_cards = []
         movie = build_tokens(title="Fight Club", year=1999)
         episode = build_tokens(title="Dark", year=2017, season=1, episode=2, episode_title="Lies")
+        anime = build_tokens(title="Frieren - Beyond Journey's End", year=2023, season=1, episode=12,
+                             episode_title="A Real Hero", tvdb_id=424536)
         for index, preset in enumerate(presets):
             movie_line = render(preset.movie_file, movie) + ".mkv"
             if preset.folder_per_movie:
@@ -214,7 +211,9 @@ class LibraryPage(Page):
                 f"{preset.movies_dir}\\{render(preset.movie_folder, movie)}\\"
                 f"{render(preset.movie_file, movie)}.mkv\n"
                 f"{preset.shows_dir}\\{render(preset.movie_folder, episode)}\\"
-                f"{render(preset.season_folder, episode)}\\{render(preset.episode_file, episode)}.mkv"
+                f"{render(preset.season_folder, episode)}\\{render(preset.episode_file, episode)}.mkv\n"
+                f"{preset.anime_dir}\\{render(preset.anime_folder, anime)}\\"
+                f"{render(preset.season_folder, anime)}\\{render(preset.episode_file, anime)}.mkv"
             )
             card.clicked.connect(lambda _=False, name=preset.name: self.select_preset(name))
             self.grid.addWidget(card, index // 2, index % 2)

@@ -25,6 +25,16 @@ from endslate.scanner import scan  # noqa: E402
 SIZE = (1440, 920)
 
 
+def settle(app, msec: int = 450) -> None:
+    """Let hover and press animations finish, so a shot shows the resting state."""
+    from PySide6.QtCore import QEventLoop, QTimer
+
+    loop = QEventLoop()
+    QTimer.singleShot(msec, loop.quit)
+    loop.exec()
+    app.processEvents()
+
+
 def main() -> int:
     root = Path(sys.argv[1]).expanduser() if len(sys.argv) > 1 else None
     out = Path(sys.argv[2]).expanduser() if len(sys.argv) > 2 else Path("shots")
@@ -76,8 +86,7 @@ def main() -> int:
         app.processEvents()
         for page in ("library", "review", "apply", "health", "history", "settings"):
             window.go_to(page)
-            app.processEvents()
-            app.processEvents()
+            settle(app)
             path = out / f"{mode}-{page}.png"
             window.grab().save(str(path))
             shots.append(path)
@@ -86,7 +95,7 @@ def main() -> int:
             window.go_to("review")
             for bucket in ("needs_you", "duplicate", "junk"):
                 window.review_page.set_filter(bucket)
-                app.processEvents()
+                settle(app)
                 path = out / f"{mode}-review-{bucket}.png"
                 window.grab().save(str(path))
                 shots.append(path)

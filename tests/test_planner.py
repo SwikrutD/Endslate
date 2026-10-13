@@ -83,6 +83,50 @@ def test_junk_folder_moves_whole(library):
     assert "desktop.ini" in names
 
 
+def test_downloads_mixes_movies_and_shows_and_keeps_unrecognized(tmp_path):
+    root = tmp_path / "Media"
+    (root / "Movies").mkdir(parents=True)
+    (root / "Shows").mkdir()
+    downloads = root / "Downloads"
+    downloads.mkdir()
+    (downloads / "Dune (2021) 1080p.mkv").write_bytes(b"movie")
+    (downloads / "Dark S01E01 Secrets 1080p.mkv").write_bytes(b"show")
+    (downloads / "notes.txt").write_text("leave me")
+
+    plan = plan_for(root)
+    found = targets(plan, Bucket.PLANNED)
+    assert "Movies/Dune (2021)/Dune (2021).mkv" in found
+    assert "Shows/Dark/Season 01/Dark S01E01 Secrets.mkv" in found
+    assert not any("notes.txt" in target for target in targets(plan))
+
+
+def test_extracted_download_archive_is_quarantined(tmp_path):
+    root = tmp_path / "Media"
+    (root / "Movies").mkdir(parents=True)
+    (root / "Shows").mkdir()
+    downloads = root / "Downloads"
+    downloads.mkdir()
+    (downloads / "Dune (2021) 1080p.mkv").write_bytes(b"movie")
+    (downloads / "Dune (2021).zip").write_bytes(b"archive")
+
+    plan = plan_for(root)
+    archive = next(e for e in plan.by_bucket(Bucket.JUNK) if e.source_path and e.source_path.suffix == ".zip")
+    assert archive.ops[0].kind is OpKind.QUARANTINE
+    assert archive.target_path == root / "_Quarantine" / plan.quarantine_root.name / "Downloads" / "Dune (2021).zip"
+
+
+def test_unextracted_download_archive_is_left_alone(tmp_path):
+    root = tmp_path / "Media"
+    (root / "Movies").mkdir(parents=True)
+    (root / "Shows").mkdir()
+    downloads = root / "Downloads"
+    downloads.mkdir()
+    (downloads / "Dune (2021).zip").write_bytes(b"archive")
+
+    plan = plan_for(root)
+    assert not any(e.source_path and e.source_path.name == "Dune (2021).zip" for e in plan.entries)
+
+
 def test_year_less_movie_needs_you(library):
     plan = plan_for(library)
     needs = [e.source_path.name for e in plan.by_bucket(Bucket.NEEDS_YOU)]
@@ -116,3 +160,48 @@ def test_nothing_targets_outside_the_root(library):
         for op in entry.ops:
             if op.dst is not None:
                 assert str(op.dst).startswith(str(library))
+
+
+def _anime_library(tmp_path, files):
+    root = tmp_path / "Media"
+    for folder in ("Movies", "Shows", "Anime"):
+        (root / folder).mkdir(parents=True, exist_ok=True)
+    for relative in files:
+        path = root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"x")
+    return root
+
+
+def test_anime_with_a_season_marker_is_planned_into_anime_offline(tmp_path):
+    root = _anime_library(tmp_path, ["Anime/Shingeki no Kyojin/[Judas] Shingeki no Kyojin - S04E01.mkv"])
+    found = targets(plan_for(root), Bucket.PLANNED)
+    assert "Anime/Shingeki no Kyojin/Season 04/Shingeki no Kyojin S04E01.mkv" in found
+
+
+def test_anime_counted_from_episode_one_waits_without_tvdb(tmp_path):
+    root = _anime_library(tmp_path, ["Downloads/[SubsPlease] Sousou no Frieren - 12 (1080p).mkv"])
+    plan = plan_for(root)
+    entry = plan.by_bucket(Bucket.NEEDS_YOU)[0]
+    assert entry.item.is_anime and entry.item.destination == "anime"
+    assert "TheTVDB" in entry.reason
+
+
+def test_a_film_in_the_anime_folder_goes_to_movies(tmp_path):
+    root = _anime_library(tmp_path, ["Anime/Your Name (2016)/Your.Name.2016.1080p.BluRay.mkv"])
+    found = targets(plan_for(root), Bucket.PLANNED)
+    assert "Movies/Your Name (2016)/Your Name (2016).mkv" in found
+
+
+def test_a_fansub_file_already_in_shows_stays_in_shows(tmp_path):
+    root = _anime_library(tmp_path, ["Shows/Spy x Family/[SubsPlease] Spy x Family S2 - 05 (1080p).mkv"])
+    found = targets(plan_for(root), Bucket.PLANNED)
+    assert "Shows/Spy x Family/Season 02/Spy x Family S02E05.mkv" in found
+
+
+def test_keeping_folder_names_keeps_the_anime_root(tmp_path):
+    root = tmp_path / "Media"
+    (root / "Anime Series" / "Dark").mkdir(parents=True)
+    (root / "Anime Series" / "Dark" / "[Grp] Dark - S01E01.mkv").write_bytes(b"x")
+    found = targets(plan_for(root, rename_top_level_folders=False), Bucket.PLANNED)
+    assert any(t.startswith("Anime Series/") for t in found)

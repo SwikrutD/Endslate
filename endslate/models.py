@@ -70,10 +70,20 @@ class ParsedName:
     resolution: str = ""
     source: str = ""
     is_sample: bool = False
+    # Fansub releases number episodes from the start of the show, not the
+    # season: "[SubsPlease] Frieren - 12" is the twelfth episode overall.
+    absolute: Optional[int] = None
+    release_group: str = ""
+    anime_hint: bool = False
+    tvdb_id: Optional[int] = None
 
     @property
     def is_episode(self) -> bool:
         return self.season is not None and self.episode is not None
+
+    @property
+    def has_episode_number(self) -> bool:
+        return self.is_episode or self.absolute is not None
 
 
 @dataclass
@@ -85,6 +95,7 @@ class Metadata:
     episode_title: str = ""
     tmdb_id: Optional[int] = None
     imdb_id: str = ""
+    tvdb_id: Optional[int] = None
     provider: str = ""
 
 
@@ -96,10 +107,27 @@ class Candidate:
     overview: str = ""
     score: float = 0.0
     poster_path: str = ""
+    tvdb_id: Optional[int] = None
+    aliases: list[str] = field(default_factory=list)
+    origin_language: str = ""
 
     @property
     def label(self) -> str:
         return f"{self.title} ({self.year})" if self.year else self.title
+
+    @property
+    def provider(self) -> str:
+        return "tvdb" if self.tvdb_id else "tmdb"
+
+    @property
+    def key(self) -> str:
+        """Unique across providers: a TVDB id and a TMDB id can be the same number."""
+        return f"tvdb:{self.tvdb_id}" if self.tvdb_id else f"tmdb:{self.tmdb_id}"
+
+    @property
+    def names(self) -> list[str]:
+        """Every name this candidate answers to, the display title first."""
+        return [self.title] + [a for a in self.aliases if a and a != self.title]
 
 
 @dataclass
@@ -110,6 +138,10 @@ class Item:
     subtitles: list[ScannedFile] = field(default_factory=list)
     artwork: list[ScannedFile] = field(default_factory=list)
     is_tv: bool = False
+    # Anime is matched against TheTVDB, which knows absolute episode numbers,
+    # and lands in its own library folder.
+    is_anime: bool = False
+    section: str = ""
     show_hint: str = ""
     parsed: ParsedName = field(default_factory=ParsedName)
     meta: Metadata = field(default_factory=Metadata)
@@ -128,6 +160,15 @@ class Item:
     @property
     def episode_title(self) -> str:
         return self.meta.episode_title or self.parsed.episode_title
+
+    @property
+    def destination(self) -> str:
+        """Which library folder this belongs in: movies, shows or anime."""
+        if self.section:
+            return self.section
+        if self.is_anime and self.is_tv:
+            return "anime"
+        return "shows" if self.is_tv else "movies"
 
     @property
     def key(self) -> str:
@@ -154,6 +195,8 @@ class PlanEntry:
     ops: list[Operation] = field(default_factory=list)
     reason: str = ""
     selected: bool = True
+    # Subtitles of this item that a better track of the same language replaced.
+    dropped_subtitles: list[Path] = field(default_factory=list)
 
     @property
     def source_path(self) -> Optional[Path]:
@@ -187,6 +230,11 @@ class Plan:
             if entry.selected and entry.bucket in (Bucket.PLANNED, Bucket.JUNK):
                 ops.extend(entry.ops)
         return ops
+
+    def change_count(self) -> int:
+        """Files that will be renamed, moved or quarantined. Folders made on the
+        way are not changes anyone asked for, so they are not counted."""
+        return sum(1 for op in self.selected_operations() if op.kind in (OpKind.MOVE, OpKind.QUARANTINE))
 
     def counts(self) -> dict[str, int]:
         out = {b.value: 0 for b in Bucket}

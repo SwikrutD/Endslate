@@ -28,8 +28,14 @@ TOKEN_HELP = {
     "part_suffix": "Part preceded by ' - '",
     "resolution": "1080p, 2160p and similar",
     "source": "BluRay, WEB-DL and similar",
+    "episode_range": "-E02 when one file holds two episodes, or nothing",
+    "episode_range_lower": "The same in lower case, -e02",
+    "absolute": "Absolute episode number, as anime counts them",
     "tmdb_id": "Numeric TMDB id",
     "imdb_id": "tt0137523 style id",
+    "tvdb_id": "Numeric TheTVDB id",
+    "tvdb_tag": "[tvdbid-424536], which Jellyfin reads as the show's id",
+    "tvdb_plex": "{tvdb-424536}, the same for Plex",
     "lang": "Subtitle language code",
     "ext": "File extension without the dot",
 }
@@ -44,7 +50,11 @@ class Preset:
     movie_folder: str = "{title} {year_paren}"
     movie_file: str = "{title} {year_paren}{part_suffix}"
     season_folder: str = "Season {season:02}"
-    episode_file: str = "{title} {year_paren} S{season:02}E{episode:02}{episode_title_suffix}"
+    episode_file: str = "{title} {year_paren} S{season:02}E{episode:02}{episode_range}{episode_title_suffix}"
+    anime_dir: str = "Anime"
+    # The show's TheTVDB id in its folder name pins it for Jellyfin, which
+    # otherwise has a hard time telling one anime from its own sequel.
+    anime_folder: str = "{title} {year_paren} {tvdb_tag}"
     folder_per_movie: bool = True
     builtin: bool = True
 
@@ -65,7 +75,8 @@ BUILTIN_PRESETS: list[Preset] = [
     Preset(
         name="Plex",
         description="Plex's documented layout. Dashes between the show, the episode code and the title.",
-        episode_file="{title} {year_paren} - s{season:02}e{episode:02}{episode_title_dash}",
+        episode_file="{title} {year_paren} - s{season:02}e{episode:02}{episode_range_lower}{episode_title_dash}",
+        anime_folder="{title} {year_paren} {tvdb_plex}",
     ),
     Preset(
         name="Flat",
@@ -75,7 +86,8 @@ BUILTIN_PRESETS: list[Preset] = [
     Preset(
         name="Kodi",
         description="Like Jellyfin but episode files carry no episode title.",
-        episode_file="{title} {year_paren} S{season:02}E{episode:02}",
+        episode_file="{title} {year_paren} S{season:02}E{episode:02}{episode_range}",
+        anime_folder="{title} {year_paren}",
     ),
 ]
 
@@ -104,6 +116,8 @@ def build_tokens(
     year: Optional[int] = None,
     season: Optional[int] = None,
     episode: Optional[int] = None,
+    episode_end: Optional[int] = None,
+    absolute: Optional[int] = None,
     episode_title: str = "",
     edition: str = "",
     part: str = "",
@@ -111,15 +125,22 @@ def build_tokens(
     source: str = "",
     tmdb_id: Optional[int] = None,
     imdb_id: str = "",
+    tvdb_id: Optional[int] = None,
     lang: str = "",
     ext: str = "",
 ) -> dict:
+    # A file holding S01E01 and S01E02 kept only the first number, so the
+    # second episode vanished from the media server.
+    has_range = episode_end is not None and episode is not None and episode_end > episode
     return {
         "title": title,
         "year": year,
         "year_paren": f"({year})" if year else "",
         "season": season,
         "episode": episode,
+        "episode_range": f"-E{episode_end:02}" if has_range else "",
+        "episode_range_lower": f"-e{episode_end:02}" if has_range else "",
+        "absolute": absolute,
         "episode_title": episode_title,
         "episode_title_suffix": f" {episode_title}" if episode_title else "",
         "episode_title_dash": f" - {episode_title}" if episode_title else "",
@@ -131,6 +152,9 @@ def build_tokens(
         "source": source,
         "tmdb_id": tmdb_id,
         "imdb_id": imdb_id,
+        "tvdb_id": tvdb_id,
+        "tvdb_tag": f"[tvdbid-{tvdb_id}]" if tvdb_id else "",
+        "tvdb_plex": f"{{tvdb-{tvdb_id}}}" if tvdb_id else "",
         "lang": lang,
         "ext": ext,
     }

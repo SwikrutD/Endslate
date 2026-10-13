@@ -13,13 +13,44 @@ Movies\Fight Club\Fight.Club.1999.REMASTERED.1080p.BluRay.DDP5.1.x265.10bit-Gala
 
 TV Shows\The 100\The.100.S01...\The.100.S01E04.Murphys.Law.1080p.AMZN.WEB-DL...mkv
    ->  Shows\The 100 (2014)\Season 01\The 100 (2014) S01E04 Murphy's Law.mkv
+
+Downloads\[SubsPlease] Sousou no Frieren - 12 (1080p) [A1B2C3D4].mkv
+   ->  Anime\Frieren - Beyond Journey's End (2023) [tvdbid-424536]\Season 01\Frieren - Beyond Journey's End (2023) S01E12 A Real Hero.mkv
 ```
+
+For mixed incoming media, create `Downloads` alongside `Movies` and `Shows`. Each
+approved run scans that folder, uses season and episode markers to separate shows from
+movies, confirms titles with TMDB, and moves recognized files to their normal
+destinations. Files that cannot be classified stay in `Downloads`, and the folder
+itself is preserved for the next run.
+
+## Anime
+
+An `Anime` folder beside `Movies` and `Shows` is a third library. Anime is matched against
+TheTVDB rather than TMDB, because fansub releases count episodes from the start of the
+show (`[Erai-raws] One Piece - 1085`) and TheTVDB is the source that knows which season
+episode 1085 falls in. Its folder carries the show's TheTVDB id, `[tvdbid-81797]`, which
+Jellyfin reads directly, so it never mistakes an anime for its live-action remake.
+
+- In `Anime`, everything with an episode number is anime. A film there goes to `Movies`
+- In `Downloads`, a release named `[Group] Title - 12` is anime and goes to `Anime`
+- In `Shows`, a file counted from episode one is placed with TheTVDB but stays in `Shows`
+- The romaji, English and Japanese names all count: `Shingeki no Kyojin` matches
+  `Attack on Titan`. When two shows still share a name, the one whose original language is
+  Japanese, Chinese or Korean is preferred, since a fansub release is anime
+- Anything still ambiguous waits in Needs you. Mob Psycho 100 is both a 2016 anime and a
+  2018 live-action drama, both Japanese, so Endslate asks
+- An episode TheTVDB does not list yet, or a `Season 2` folder holding `- 05` that could be
+  either the fifth of season two or the fifth overall, waits rather than guessing
+- Without a TheTVDB key, anime named `S01E05` still resolves through TMDB; anything counted
+  from episode one waits in Needs you with a note saying why
 
 ## What it will never do
 
 - Overwrite an existing file. A collision stops that operation, it does not resolve itself
 - Delete anything. Removal means a move into `_Quarantine`, except folders left empty
 - Move an item it is not confident about. Those wait for you in the Needs you tab
+- Remove or quarantine unrecognized files in `Downloads`
 - Write outside the library root
 - Open a video file for writing. It reads names and sizes, nothing else
 
@@ -58,9 +89,14 @@ from the Desktop icon there is no console to print to, so any error is written t
 
 1. **Settings**: paste your TMDB API key (the v3 key from your TMDB account settings) and
    press Test. Without a key Endslate still works, but anything with no year in its
-   filename lands in Needs you instead of resolving itself
+   filename lands in Needs you instead of resolving itself. For anime, paste a TheTVDB v4
+   key as well (thetvdb.com, Dashboard, API Keys); a user-supported key also needs your
+   subscriber PIN
 2. **Library**: drop the folder that holds `Movies` and `TV Shows` onto the page, or
-   browse to it. Pick a preset. Press Scan library
+   browse to it. You may also place mixed movies and episodes in a `Downloads` folder
+   alongside them; each run classifies recognized files and moves them to the configured
+   destination. Unrecognized download contents stay in `Downloads`. Pick a preset.
+   Press Scan library
 3. **Review**: six tiles across the top are both the counts and the filter. Planned is
    what will happen, Needs you is what needs a decision. Double-click any row to search
    TMDB, with posters, or type the title in by hand
@@ -85,8 +121,12 @@ listening on the Jellyfin port and warns you, but the check is a courtesy, not a
 Right-click any row to open its folder in Explorer, copy either path, or exclude it.
 
 The theme follows Windows by default and can be pinned to dark or light in Settings. Both
-are chalk on slate: every control is a neutral, and colour only ever marks a file's state.
-Green will move, amber needs you, red collides, violet goes to quarantine.
+are soft UI on cool clay: every surface is moulded from one grey and told apart by light,
+cards raised, inputs pressed in, and whatever you have selected stays pressed in. Violet
+is the one primary action and the focus ring. Otherwise colour only marks a file's state:
+teal will move, amber needs you, rose collides, blue goes to quarantine. The interface is
+set in DM Sans and Plus Jakarta Sans, bundled in `assets\fonts` under the SIL Open Font
+License.
 
 ## It remembers what you tell it
 
@@ -185,11 +225,17 @@ edition, part, resolution or source and names them `Housefull 5 (2025) - A.mkv` 
 | Flat | `Movies\Title (Year).mkv` | same as Jellyfin |
 | Kodi | same as Jellyfin | `Shows\Title (Year)\Season 01\Title (Year) S01E01.mkv` |
 
-Settings has an Advanced section where each preset is four editable templates with a live
+Anime uses the same season folder and episode name under `Anime\`, with the show's id in
+its folder: `Title (Year) [tvdbid-N]` for Jellyfin and Flat, `Title (Year) {tvdb-N}` for
+Plex, and no id for Kodi. A file holding two episodes is named `S01E01-E02`.
+
+Settings has an Advanced section where each preset's templates are editable with a live
 preview. Tokens: `{title}` `{year}` `{year_paren}` `{season:02}` `{episode:02}`
-`{episode_title}` `{episode_title_suffix}` `{episode_title_dash}` `{edition}`
-`{edition_suffix}` `{part}` `{part_suffix}` `{resolution}` `{source}` `{tmdb_id}`
-`{imdb_id}` `{lang}` `{ext}`. Save your edits under a new name and it joins the list.
+`{episode_range}` `{episode_range_lower}` `{absolute}` `{episode_title}`
+`{episode_title_suffix}` `{episode_title_dash}` `{edition}` `{edition_suffix}` `{part}`
+`{part_suffix}` `{resolution}` `{source}` `{tmdb_id}` `{imdb_id}` `{tvdb_id}` `{tvdb_tag}`
+`{tvdb_plex}` `{lang}` `{ext}`. Save your edits under a new name and it joins the list.
+Presets saved before anime support pick up the default anime templates.
 
 ## Subtitles
 
@@ -224,6 +270,10 @@ no media at all, and video files under 150 MB with `sample` in the name.
 `poster.jpg`, `folder.jpg`, `fanart.jpg`, `banner.jpg` and `logo.png` are artwork, not
 junk, and are kept and renamed alongside their video.
 
+Large archives in `Downloads` are kept when no extracted video is present. When an
+archive has extracted video files beside it, the videos are organized normally and the
+archive is moved to that run's `_Quarantine` folder.
+
 ## Command line
 
 The GUI is the main interface. The CLI is there for checking things quickly.
@@ -250,9 +300,11 @@ against the real library without risk.
 
 | Module | Job |
 | --- | --- |
-| `scanner.py` | Walk the tree, classify every file |
-| `parser.py` | Messy name to a guess: title, year, season, episode, language, edition |
+| `scanner.py` | Walk the tree, classify every file, find `Movies`, `Shows`, `Anime` and `Downloads` |
+| `parser.py` | Messy name to a guess: title, year, season, episode or absolute number, release group |
 | `matcher.py` | Confirm the guess against TMDB, score it, offer candidates |
+| `tvdb.py` | The same for anime against TheTVDB, and absolute numbers to seasons |
+| `matching.py` | Which provider answers for which item, with your remembered decisions on top |
 | `planner.py` | Render the preset into target paths, find collisions and duplicates |
 | `presets.py` | The four presets and the template renderer |
 | `subtitles.py` | Pair subtitles to videos, detect language, name the result |
@@ -266,7 +318,8 @@ against the real library without risk.
 | `report.py` | The problems file written beside a run's journal |
 | `jellyfin.py` | Ask Jellyfin to rescan, what it identified, and what it lost track of |
 | `cli.py` | The command line |
-| `ui/theme.py` | The design system: colour, type and spacing tokens, and the stylesheet |
+| `ui/theme.py` | The design system: colour, type, depth and spacing tokens, and the stylesheet |
+| `ui/neu.py` | The soft UI shadows: blurred sprites, nine-sliced, painted beneath each control |
 | `ui/icons.py` | A stroke icon set drawn as SVG and tinted to the theme |
 | `ui/widgets.py` | Cards, tiles, pills, toggles, banners, empty states, toasts |
 | `ui/delegate.py` | How one proposed change is drawn in the review list |
@@ -294,7 +347,9 @@ python scripts/record_tmdb.py
 ```
 
 That saves real search results and season listings to `tests/fixtures/tmdb/responses.json`
-and `tests/test_tmdb_live_fixtures.py` replays them offline from then on. Only response
+and `tests/test_tmdb_live_fixtures.py` replays them offline from then on.
+`scripts/record_tvdb.py` does the same for TheTVDB into `tests/fixtures/tvdb/`, replayed by
+`tests/test_tvdb.py`. Only response
 bodies are stored, never the key, and the recorder refuses to write if it finds the key in
 the payload anyway. Those tests skip themselves until the file exists.
 

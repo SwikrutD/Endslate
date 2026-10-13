@@ -37,6 +37,8 @@ def runs_dir() -> Path:
 @dataclass
 class Config:
     tmdb_api_key: str = ""
+    tvdb_api_key: str = ""
+    tvdb_pin: str = ""
     metadata_language: str = "en-US"
     subtitle_language: str = "en"
     preset: str = "Jellyfin"

@@ -78,7 +78,9 @@ def normalize(value: str) -> str:
     parts = key.split()
     if parts and parts[-1] in _MAP:
         return _MAP[parts[-1]]
-    if parts and parts[0] in _MAP:
+    # "English SDH" names its language first. "It Follows" and "No Country for
+    # Old Men" do not, so a leading word only counts when it is a full name.
+    if parts and len(parts[0]) > 3 and parts[0] in _MAP:
         return _MAP[parts[0]]
     return ""
 

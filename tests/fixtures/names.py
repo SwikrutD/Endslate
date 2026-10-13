@@ -90,6 +90,39 @@ EPISODE_NAMES = [
      {"title": "The 100", "season": 5, "episode": 2, "episode_title": "Red Queen"}),
 ]
 
+# Fansub and anime releases. A leading [Group] is never part of the title, and
+# a number after " - " counts from the first episode of the show.
+ANIME_NAMES = [
+    ("[SubsPlease] Sousou no Frieren - 12 (1080p) [A1B2C3D4].mkv", False,
+     {"title": "Sousou no Frieren", "absolute": 12, "season": None, "release_group": "SubsPlease",
+      "anime_hint": True, "language": "", "resolution": "1080p"}),
+    ("[Erai-raws] One Piece - 1085 [1080p][Multiple Subtitle].mkv", False,
+     {"title": "One Piece", "absolute": 1085, "year": None, "anime_hint": True}),
+    ("[SubsPlease] Spy x Family S2 - 05 (1080p) [ABCDEF12].mkv", False,
+     {"title": "Spy x Family", "season": 2, "episode": 5, "absolute": None}),
+    ("[HorribleSubs] Mob Psycho 100 - 05 [720p].mkv", False,
+     {"title": "Mob Psycho 100", "absolute": 5}),
+    ("[SubsPlease] 86 - Eighty Six - 01v2 (1080p).mkv", False,
+     {"title": "86 - Eighty Six", "absolute": 1}),
+    ("[Judas] Shingeki no Kyojin - S04E01.mkv", False,
+     {"title": "Shingeki no Kyojin", "season": 4, "episode": 1, "anime_hint": True, "language": ""}),
+    ("Mob Psycho 100 2nd Season - 03.mkv", False,
+     {"title": "Mob Psycho 100", "season": 2, "episode": 3}),
+    ("Naruto Shippuden - 001.mkv", False, {"title": "Naruto Shippuden", "absolute": 1, "anime_hint": False}),
+    ("Jujutsu Kaisen EP05 1080p.mkv", False, {"title": "Jujutsu Kaisen", "absolute": 5}),
+    ("Show - 01 - The Beginning [1080p].mkv", False,
+     {"title": "Show", "absolute": 1, "episode_title": "The Beginning"}),
+    ("[SubsPlease] Sousou no Frieren (01-28) (1080p) [Batch]", True,
+     {"title": "Sousou no Frieren", "absolute": None}),
+    ("Frieren - Beyond Journey's End (2023) [tvdbid-424536]", True,
+     {"title": "Frieren - Beyond Journey's End", "year": 2023, "tvdb_id": 424536}),
+    # Western names that must not turn into anime.
+    ("Thor 2 - The Dark World", True, {"title": "Thor 2 - The Dark World", "absolute": None}),
+    ("Blade Runner - 2049 (2017).mkv", False, {"absolute": None, "year": 2017}),
+    ("Rocky - 2.mkv", False, {"absolute": None}),
+    ("[REC] (2007).mkv", False, {"title": "REC", "year": 2007, "release_group": ""}),
+]
+
 SUBTITLE_NAMES = [
     ("dan.srt", "da"),
     ("pol.srt", "pl"),
@@ -99,6 +132,12 @@ SUBTITLE_NAMES = [
     ("Forced.eng.srt", "en"),
     ("The.Hangover.Part.Ii.English-WWW.MY-SUBS.NET.srt", "en"),
     ("Gravity Falls - 1x18 - Land Before Swine.eng.srt", "en"),
+    # "no" and "it" are words before they are Norwegian and Italian.
+    ("[SubsPlease] Sousou no Frieren - 12 (1080p).en.ass", "en"),
+    ("Point of No Return (1993).srt", ""),
+    ("No Country for Old Men (2007).srt", ""),
+    ("It Follows (2014).srt", ""),
+    ("Sousou no Frieren - 12.no.srt", "no"),
 ]
 
 JUNK_NAMES = [

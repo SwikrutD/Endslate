@@ -2,27 +2,29 @@
 
 Two lines: what the file will be called, and where it is now. The second line is
 monospaced and dimmed, so the eye runs down the new names and only drops to the
-old path when something looks wrong.
+old path when something looks wrong. Rows are cut into the sheet they sit on:
+the selected one is pressed in, the one under the pointer is lit.
 """
 from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import QEvent, QRect, QSize, Qt
-from PySide6.QtGui import QColor, QFont, QFontMetrics, QPainter, QPen
+from PySide6.QtCore import QEvent, QRect, QRectF, QSize, Qt
+from PySide6.QtGui import QColor, QFont, QFontMetrics, QPainter
 from PySide6.QtWidgets import QStyle, QStyledItemDelegate
 
-from endslate.models import Bucket, OpKind
-from endslate.ui import icons, theme
+from endslate.models import Bucket
+from endslate.ui import icons, neu, theme
 from endslate.ui.tablemodel import ENTRY_ROLE
-from endslate.ui.theme import BUCKET_TONE, RADIUS_SM, tone_colours
+from endslate.ui.theme import BUCKET_TONE, tone_colours
 
-ROW_HEIGHT = 64
-CHECK_X = 16
-CHECK_SIZE = 17
-DOT_X = 45
-TEXT_X = 62
-RIGHT_PAD = 16
+ROW_HEIGHT = 70
+CHECK_X = 18
+CHECK_SIZE = 22
+DOT_X = 52
+TEXT_X = 70
+RIGHT_PAD = 18
+INSET = 4
 
 
 def human_size(value: int) -> str:
@@ -53,47 +55,47 @@ class PlanRowDelegate(QStyledItemDelegate):
 
         palette = theme.active()
         tone = BUCKET_TONE.get(entry.bucket.value, "neutral")
-        strong, soft, _tone_text = tone_colours(palette, tone)
+        strong, _soft, _tone_text = tone_colours(palette, tone)
 
         painter.save()
         painter.setRenderHint(QPainter.Antialiasing, True)
 
         rect = option.rect
+        body = QRectF(rect).adjusted(INSET, INSET, -INSET, -INSET)
         selected = bool(option.state & QStyle.State_Selected)
         hovered = bool(option.state & QStyle.State_MouseOver)
         if selected:
-            painter.fillRect(rect, QColor(palette.selection))
+            neu.paint_inset(painter, body, 18, neu.INSET["sm"])
         elif hovered:
-            painter.fillRect(rect, QColor(palette.surface_alt))
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(QColor(palette.surface_alt))
+            painter.drawRoundedRect(body, 18, 18)
+        else:
+            # An etched groove between rows rather than a ruled line.
+            dark, alpha = neu._rgba(palette.shadow_dark)
+            groove = QColor(dark)
+            groove.setAlphaF(alpha * 0.45)
+            painter.setPen(Qt.NoPen)
+            left = rect.left() + (TEXT_X if self.model.selectable else CHECK_X + 20)
+            painter.fillRect(QRectF(left, rect.bottom(), rect.right() - left - RIGHT_PAD, 1), groove)
 
-        # hairline between rows
-        painter.setPen(QPen(QColor(palette.line), 1))
-        painter.drawLine(
-            rect.left() + (TEXT_X if self.model.selectable else CHECK_X), rect.bottom(),
-            rect.right(), rect.bottom(),
-        )
-
-        # selection accent on the left edge, in chalk, since colour is taken
-        if selected:
-            painter.fillRect(QRect(rect.left(), rect.top(), 2, rect.height()), QColor(palette.accent))
-
-        # checkbox
+        # checkbox: a small well, or a violet key pressed down into it
         if self.model.selectable:
-            box = self._check_rect(rect)
-            checked = entry.selected
-            painter.setPen(QPen(QColor(palette.accent if checked else palette.line_strong), 1))
-            painter.setBrush(QColor(palette.accent) if checked else Qt.NoBrush)
-            painter.drawRoundedRect(box, 3, 3)
-            if checked:
-                painter.drawPixmap(box.left() + 2, box.top() + 2, icons.pixmap("check", palette.on_accent, 13))
-            painter.setBrush(Qt.NoBrush)
+            box = QRectF(self._check_rect(rect))
+            if entry.selected:
+                neu.paint_raised(painter, box, 8, neu.RAISED["xs"], fill=neu.accent_fill(box))
+                painter.drawPixmap(
+                    int(box.left() + (CHECK_SIZE - 14) / 2), int(box.top() + (CHECK_SIZE - 14) / 2),
+                    icons.pixmap("check", palette.on_accent, 14),
+                )
+            else:
+                neu.paint_inset(painter, box, 8, neu.INSET["sm"])
 
-        # tone mark: a short upright bar, like a clip colour in an edit
-        # timeline, pulled left when there is no checkbox to sit beside
+        # tone mark: a short upright pill, like a clip colour on a timeline
         dot_x = DOT_X if self.model.selectable else CHECK_X + 4
         painter.setPen(Qt.NoPen)
         painter.setBrush(QColor(strong))
-        painter.drawRoundedRect(QRect(rect.left() + dot_x + 2, rect.top() + 14, 3, rect.height() - 28), 1.5, 1.5)
+        painter.drawRoundedRect(QRectF(rect.left() + dot_x, rect.top() + 18, 4, rect.height() - 36), 2, 2)
         painter.setBrush(Qt.NoBrush)
 
         # ------------------------------------------------------------- text
@@ -104,37 +106,37 @@ class PlanRowDelegate(QStyledItemDelegate):
         if entry.bucket in (Bucket.NEEDS_YOU, Bucket.DUPLICATE) and entry.item is not None:
             painter.drawPixmap(
                 right - 14, rect.center().y() - 7,
-                icons.pixmap("chevron-right", palette.line_strong, 14),
+                icons.pixmap("chevron-right", palette.text_faint, 14),
             )
-            right -= 22
+            right -= 24
 
         size_text = human_size(self.model.size_of(entry))
         extra = self.model.extra_moves(entry)
         meta_font = theme.mono_font(theme.SIZE_CAPTION)
         meta_metrics = QFontMetrics(meta_font)
+        badge_font = theme.display_font(theme.SIZE_MICRO, 700)
+        badge_metrics = QFontMetrics(badge_font)
 
-        meta_width = 0
-        if size_text:
-            meta_width = meta_metrics.horizontalAdvance(size_text) + 12
-        badge_width = 0
-        badge_text = ""
+        badges: list[str] = []
+        if entry.item is not None and entry.item.is_anime:
+            badges.append("ANIME")
         if extra:
-            badge_text = f"+{extra} sub" + ("s" if extra > 1 else "")
-            badge_width = meta_metrics.horizontalAdvance(badge_text) + 20
+            badges.append(f"+{extra} SUB" + ("S" if extra > 1 else ""))
+
+        meta_width = meta_metrics.horizontalAdvance(size_text) + 14 if size_text else 0
+        badge_width = sum(badge_metrics.horizontalAdvance(b) + 30 for b in badges)
 
         text_right = right - meta_width - badge_width
         available = max(120, text_right - left)
 
         primary, secondary = self._lines(entry)
 
-        title_font = QFont(painter.font())
-        title_font.setPointSize(theme.SIZE_BODY)
-        title_font.setWeight(QFont.DemiBold if entry.bucket is Bucket.PLANNED else QFont.Normal)
+        title_font = theme.font("body", weight=700 if entry.bucket is Bucket.PLANNED else 500)
         painter.setFont(title_font)
         title_metrics = QFontMetrics(title_font)
         painter.setPen(QColor(palette.text if entry.bucket is not Bucket.NOOP else palette.text_dim))
         painter.drawText(
-            QRect(left, rect.top() + 11, available, title_metrics.height()),
+            QRect(left, rect.top() + 13, available, title_metrics.height()),
             Qt.AlignLeft | Qt.AlignVCenter,
             title_metrics.elidedText(primary, Qt.ElideMiddle, available),
         )
@@ -144,19 +146,19 @@ class PlanRowDelegate(QStyledItemDelegate):
         mono = theme.mono_font(theme.SIZE_CAPTION)
         painter.setFont(mono)
         mono_metrics = QFontMetrics(mono)
-        glyph_y = rect.top() + 36
+        glyph_y = rect.top() + 40
         painter.drawPixmap(left, glyph_y + 2, icons.pixmap("arrow-right", palette.text_faint, 12))
         painter.setPen(QColor(palette.text_faint))
         painter.drawText(
-            QRect(left + 17, glyph_y, available - 17, mono_metrics.height() + 2),
+            QRect(left + 18, glyph_y, available - 18, mono_metrics.height() + 2),
             Qt.AlignLeft | Qt.AlignVCenter,
-            mono_metrics.elidedText(secondary, Qt.ElideMiddle, available - 17),
+            mono_metrics.elidedText(secondary, Qt.ElideMiddle, available - 18),
         )
 
         # ------------------------------------------------------------- meta
-        painter.setFont(meta_font)
         cursor = right
         if size_text:
+            painter.setFont(meta_font)
             painter.setPen(QColor(palette.text_faint))
             width = meta_metrics.horizontalAdvance(size_text)
             painter.drawText(
@@ -164,16 +166,15 @@ class PlanRowDelegate(QStyledItemDelegate):
                 Qt.AlignRight | Qt.AlignVCenter,
                 size_text,
             )
-            cursor -= width + 14
-        if badge_text:
-            width = meta_metrics.horizontalAdvance(badge_text) + 14
-            badge = QRect(cursor - width, rect.center().y() - 10, width, 20)
-            painter.setPen(Qt.NoPen)
-            painter.setBrush(QColor(palette.surface_hi))
-            painter.drawRoundedRect(badge, RADIUS_SM, RADIUS_SM)
-            painter.setBrush(Qt.NoBrush)
-            painter.setPen(QColor(palette.text_dim))
+            cursor -= width + 16
+        painter.setFont(badge_font)
+        for badge_text in badges:
+            width = badge_metrics.horizontalAdvance(badge_text) + 22
+            badge = QRectF(cursor - width, rect.center().y() - 12, width, 24)
+            neu.paint_inset(painter, badge, 12, neu.INSET["sm"])
+            painter.setPen(QColor(palette.accent_text if badge_text == "ANIME" else palette.text_dim))
             painter.drawText(badge, Qt.AlignCenter, badge_text)
+            cursor -= width + 8
 
         painter.restore()
 
@@ -203,7 +204,7 @@ class PlanRowDelegate(QStyledItemDelegate):
         if not self.model.selectable:
             return False
         if event.type() == QEvent.MouseButtonRelease:
-            hit = self._check_rect(option.rect).adjusted(-8, -8, 8, 8)
+            hit = self._check_rect(option.rect).adjusted(-10, -10, 10, 10)
             if hit.contains(event.position().toPoint()):
                 entry = index.data(ENTRY_ROLE)
                 if entry is not None:

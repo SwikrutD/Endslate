@@ -57,17 +57,20 @@ def pair(
     """Return (subtitle path -> item) and the subtitles nothing claimed."""
     by_dir: dict[Path, list[Item]] = {}
     by_episode: dict[tuple[str, int, int], Item] = {}
+    by_absolute: dict[tuple[str, int], Item] = {}
     for item in items:
         by_dir.setdefault(item.video.path.parent, []).append(item)
         if item.is_tv and item.parsed.season is not None and item.parsed.episode is not None:
             key = (item.show_hint.lower(), item.parsed.season, item.parsed.episode)
             by_episode.setdefault(key, item)
+        if item.is_tv and item.parsed.absolute is not None:
+            by_absolute.setdefault((item.show_hint.lower(), item.parsed.absolute), item)
 
     paired: dict[Path, Item] = {}
     orphans: list[ScannedFile] = []
 
     for sub in subs:
-        item = _find_owner(sub, by_dir, by_episode, items, videos_under)
+        item = _find_owner(sub, by_dir, by_episode, items, videos_under, by_absolute)
         if item is None:
             orphans.append(sub)
         else:
@@ -97,12 +100,30 @@ def _find_owner(
     by_episode: dict[tuple[str, int, int], Item],
     items: list[Item],
     videos_under,
+    by_absolute: Optional[dict[tuple[str, int], Item]] = None,
 ) -> Optional[Item]:
     here = by_dir.get(sub.path.parent, [])
     if len(here) == 1:
         return here[0]
 
-    parsed = parse(sub.path.name)
+    # "Frieren - 12.en.ass" beside "Frieren - 12.mkv" is that video's,
+    # whatever else the folder holds.
+    name = sub.path.name.lower()
+    exact = [item for item in here if name.startswith(item.video.path.stem.lower() + ".")]
+    if len(exact) == 1:
+        return exact[0]
+
+    anime = any(item.is_anime for item in here)
+    parsed = parse(sub.path.name, anime=anime)
+    if parsed.absolute is not None and parsed.season is None and by_absolute:
+        hint = _show_hint_for(sub.path, items)
+        found = by_absolute.get((hint.lower(), parsed.absolute))
+        if found is not None:
+            return found
+        same = [item for item in here if item.parsed.absolute == parsed.absolute]
+        if len(same) == 1:
+            return same[0]
+
     if parsed.season is not None and parsed.episode is not None:
         hint = _show_hint_for(sub.path, items)
         found = by_episode.get((hint.lower(), parsed.season, parsed.episode))
@@ -118,10 +139,15 @@ def _find_owner(
             return matches[0]
 
     if here:
+        # Only when the title settles it. Two episodes of one show share a
+        # title, and handing the subtitle to the first of them gave episode
+        # twelve's subtitles to episode one.
         target = _normalized_stem(sub.path.stem)
-        for item in here:
-            if _normalized_stem(item.video.path.stem) == target:
-                return item
+        same = [item for item in here if _normalized_stem(item.video.path.stem) == target]
+        if len(same) == 1:
+            return same[0]
+        if same:
+            return None
 
     # A Subs folder, or any ancestor holding exactly one video.
     directory = sub.path.parent

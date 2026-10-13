@@ -21,6 +21,7 @@ API = "https://api.themoviedb.org/3"
 RATE_LIMIT = 40
 RATE_WINDOW = 10.0
 TIMEOUT = 15
+MAX_RETRIES = 3
 
 _ARTICLE_RE = re.compile(r"^(the|a|an)\s+", re.I)
 
@@ -80,6 +81,9 @@ class TmdbError(RuntimeError):
 
 
 class TmdbMatcher:
+    provider_name = "TMDB"
+    provider_key = "tmdb"
+
     def __init__(
         self,
         api_key: str,
@@ -107,7 +111,7 @@ class TmdbMatcher:
             self._session = requests.Session()
         return self._session
 
-    def _get(self, path: str, **params) -> Optional[dict]:
+    def _get(self, path: str, _attempt: int = 0, **params) -> Optional[dict]:
         key = path + "?" + "&".join(f"{k}={v}" for k, v in sorted(params.items())) + f"&lang={self.language}"
         self.lookups += 1
         cached = self.cache.get(key)
@@ -128,8 +132,13 @@ class TmdbMatcher:
         if response.status_code == 401:
             raise TmdbError("TMDB rejected the API key")
         if response.status_code == 429:
-            time.sleep(2)
-            return self._get(path, **params)
+            # Rate limited. Back off a few times, then give up on this one call
+            # rather than recursing for as long as TMDB keeps saying no.
+            if _attempt >= MAX_RETRIES:
+                self.offline_reason = "HTTP 429, rate limited"
+                return None
+            time.sleep(2 * (_attempt + 1))
+            return self._get(path, _attempt=_attempt + 1, **params)
         if response.status_code >= 400:
             self.offline_reason = f"HTTP {response.status_code}"
             return None
@@ -145,7 +154,7 @@ class TmdbMatcher:
         if year:
             params["year"] = year
         data = self._get("/search/movie", **params)
-        if data is None and year:
+        if not (data or {}).get("results") and year:
             data = self._get("/search/movie", query=title)
         if not data:
             return []
@@ -170,7 +179,7 @@ class TmdbMatcher:
         if year:
             params["first_air_date_year"] = year
         data = self._get("/search/tv", **params)
-        if data is None and year:
+        if not (data or {}).get("results") and year:
             data = self._get("/search/tv", query=name)
         if not data:
             return []
@@ -217,15 +226,18 @@ class TmdbMatcher:
         Capping at 1.0 threw the year away exactly when it mattered: two films
         called The Witch, one from 2015 and one from 2016, both scored 1.0, so
         the wrong year could sort first and the item fell into Needs you.
+
+        A candidate with aliases (TheTVDB lists the romaji, the English and the
+        Japanese for an anime) scores on whichever name the release used.
         """
-        score = similarity(guess_title, candidate.title)
+        score = max(similarity(guess_title, name) for name in candidate.names)
         if guess_year and candidate.year == guess_year:
             # TMDB calls it Dune, the release calls it Dune - Part One. Only
             # trusted when the year agrees, since without it every sequel's
             # subtitle would collapse onto the first film.
             head = main_title(guess_title)
             if head != guess_title:
-                score = max(score, similarity(head, candidate.title) - 0.05)
+                score = max(score, max(similarity(head, name) for name in candidate.names) - 0.05)
         if guess_year and candidate.year:
             if guess_year == candidate.year:
                 score += 0.15
@@ -235,34 +247,40 @@ class TmdbMatcher:
                 score -= 0.20
         return round(score, 4)
 
+    def _narrow(self, tied: list[Candidate]) -> list[Candidate]:
+        """A provider's own way to break a letter-for-letter tie. TMDB has none."""
+        return tied
+
     def _decide(self, item: Item, candidates: list[Candidate], guess_title: str, guess_year: Optional[int]):
         for candidate in candidates:
             candidate.score = self._score(guess_title, guess_year, candidate)
+        literal = literal_title(guess_title)
         candidates.sort(
             key=lambda c: (
                 bool(guess_year and c.year == guess_year),
                 c.score,
-                literal_title(c.title) == literal_title(guess_title),
+                any(literal_title(name) == literal for name in c.names),
             ),
             reverse=True,
         )
         item.candidates = candidates[:8]
         if not candidates:
             item.confidence = Confidence.LOW
-            item.note = "no TMDB result"
+            item.note = f"no {self.provider_name} result"
             return None
         best = candidates[0]
-        exact = normalize_title(best.title) == normalize_title(guess_title)
+        wanted = normalize_title(guess_title)
+        exact = any(normalize_title(name) == wanted for name in best.names)
         runner_up = candidates[1].score if len(candidates) > 1 else 0.0
         clear = best.score - runner_up >= 0.10 or len(candidates) == 1
         if not clear and exact:
             # Two titles that tie once the article is dropped (Dark, The Dark)
             # are told apart by the one that matches letter for letter, as long
             # as it is the only one that does.
-            literal = literal_title(guess_title)
-            same = [c for c in candidates if literal_title(c.title) == literal]
+            same = [c for c in candidates if any(literal_title(name) == literal for name in c.names)]
             if guess_year:
                 same = [c for c in same if c.year == guess_year] or same
+            same = self._narrow(same)
             clear = len(same) == 1 and same[0] is best
 
         if exact and guess_year and best.year == guess_year:
@@ -286,7 +304,10 @@ class TmdbMatcher:
         total = len(items)
         done = 0
 
-        movie_cache: dict[tuple, Optional[Candidate]] = {}
+        # One lookup per title. The second copy of a film used to get the answer
+        # without the candidates or the confidence, so it reached Needs you
+        # with an empty list to choose from, or dropped from high to medium.
+        movie_cache: dict[tuple, tuple] = {}
         for item in movies:
             done += 1
             if progress and done % 5 == 0:
@@ -295,25 +316,26 @@ class TmdbMatcher:
                 item.confidence = Confidence.NONE
                 continue
             if self.unreachable:
-                item.confidence = _fallback_confidence(item)
-                item.note = f"TMDB unreachable ({self.offline_reason}), used the filename"
+                item.confidence = offline_confidence(item)
+                item.note = f"{self.provider_name} unreachable ({self.offline_reason}), used the filename"
                 continue
             key = (normalize_title(item.parsed.title), item.parsed.year)
             if key in movie_cache:
-                best = movie_cache[key]
+                best, item.candidates, item.confidence, item.note = movie_cache[key]
+                item.candidates = list(item.candidates)
                 if best is None:
-                    item.confidence = Confidence.LOW
-                    item.note = "no confident TMDB match"
                     continue
             else:
                 candidates = self.search_movie(item.parsed.title, item.parsed.year)
                 if not candidates and (not self.api_key or self.unreachable):
-                    item.confidence = _fallback_confidence(item)
+                    item.confidence = offline_confidence(item)
                     if self.unreachable:
-                        item.note = f"TMDB unreachable ({self.offline_reason}), used the filename"
+                        item.note = f"{self.provider_name} unreachable ({self.offline_reason}), used the filename"
                     continue
                 best = self._decide(item, candidates, item.parsed.title, item.parsed.year)
-                movie_cache[key] = best
+                if best is not None and item.confidence not in (Confidence.HIGH, Confidence.MEDIUM):
+                    item.confidence = Confidence.MEDIUM
+                movie_cache[key] = (best, list(item.candidates), item.confidence, item.note)
             if best is not None:
                 item.meta = Metadata(title=best.title, year=best.year, tmdb_id=best.tmdb_id, provider="tmdb")
                 if item.confidence not in (Confidence.HIGH, Confidence.MEDIUM):
@@ -330,17 +352,20 @@ class TmdbMatcher:
             sample = group[0]
             if self.unreachable:
                 for item in group:
-                    item.confidence = _fallback_confidence(item)
-                    item.note = f"TMDB unreachable ({self.offline_reason}), used the filename"
+                    item.confidence = offline_confidence(item)
+                    item.note = f"{self.provider_name} unreachable ({self.offline_reason}), used the filename"
                 continue
-            candidates = self.search_show(show_name, sample.parsed.year)
+            # The folder name is the key that groups the episodes. The parsed
+            # title is what to search for: "3 Body Problem (2024)" found nothing.
+            query = sample.parsed.title or show_name
+            candidates = self.search_show(query, sample.parsed.year)
             if not candidates and (not self.api_key or self.unreachable):
                 for item in group:
-                    item.confidence = _fallback_confidence(item)
+                    item.confidence = offline_confidence(item)
                     if self.unreachable:
-                        item.note = f"TMDB unreachable ({self.offline_reason}), used the filename"
+                        item.note = f"{self.provider_name} unreachable ({self.offline_reason}), used the filename"
                 continue
-            best = self._decide(sample, candidates, show_name, sample.parsed.year)
+            best = self._decide(sample, candidates, query, sample.parsed.year)
             if best is None:
                 for item in group:
                     item.confidence = Confidence.LOW
@@ -367,12 +392,16 @@ class TmdbMatcher:
                 )
                 item.confidence = sample.confidence if sample.confidence != Confidence.LOW else Confidence.MEDIUM
                 if not episode_title:
-                    item.note = "episode title not in TMDB, kept the one from the filename"
+                    item.note = f"episode title not in {self.provider_name}, kept the one from the filename"
 
 
-def _fallback_confidence(item: Item) -> Confidence:
+def offline_confidence(item: Item) -> Confidence:
+    """What the filename alone justifies, when no provider can be asked."""
     if not item.parsed.title:
         return Confidence.NONE
     if item.is_tv:
         return Confidence.HIGH if item.parsed.season is not None and item.parsed.episode is not None else Confidence.LOW
     return Confidence.HIGH if item.parsed.year else Confidence.LOW
+
+
+_fallback_confidence = offline_confidence

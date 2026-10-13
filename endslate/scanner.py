@@ -10,9 +10,11 @@ from endslate import fsops, junk
 from endslate.models import FileKind, ScannedFile
 
 QUARANTINE_DIRNAME = "_Quarantine"
+DOWNLOADS_DIRNAME = "Downloads"
 
 MOVIE_DIR_NAMES = ("movies", "movie", "films", "film")
 SHOW_DIR_NAMES = ("tv shows", "tvshows", "shows", "series", "tv")
+ANIME_DIR_NAMES = ("anime", "anime shows", "anime series")
 
 
 @dataclass
@@ -23,6 +25,8 @@ class LibraryScan:
     children: dict[Path, list[Path]] = field(default_factory=dict)
     movies_root: Optional[Path] = None
     shows_root: Optional[Path] = None
+    anime_root: Optional[Path] = None
+    downloads_root: Optional[Path] = None
     errors: list[str] = field(default_factory=list)
 
     def files_in(self, directory: Path) -> list[ScannedFile]:
@@ -92,6 +96,8 @@ def scan(root: Path) -> LibraryScan:
 
     result.movies_root = _match_root(root, MOVIE_DIR_NAMES)
     result.shows_root = _match_root(root, SHOW_DIR_NAMES)
+    result.anime_root = _match_root(root, ANIME_DIR_NAMES)
+    result.downloads_root = _match_root(root, (DOWNLOADS_DIRNAME.lower(),))
     return result
 
 

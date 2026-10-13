@@ -20,16 +20,16 @@ SEVERITY_LABEL = {PROBLEM: "Problems", WARNING: "Worth a look", NOTE: "Notes"}
 
 class FindingCard(Card):
     def __init__(self, finding: Finding, page, parent=None):
-        super().__init__(quiet=True, padding=SPACE["lg"], parent=parent)
+        super().__init__(padding=SPACE["xl"], parent=parent)
         self.finding = finding
         self.body.setSpacing(SPACE["sm"])
 
         head = QHBoxLayout()
         head.setSpacing(SPACE["md"])
         self.glyph = QWidget()
-        self.glyph.setFixedSize(9, 9)
-        head.addWidget(self.glyph, 0, Qt.AlignTop)
-        head.addWidget(label(finding.title, "body"), 1)
+        self.glyph.setFixedSize(10, 10)
+        head.addWidget(self.glyph, 0, Qt.AlignVCenter)
+        head.addWidget(label(finding.title, "strong"), 1)
         if finding.bytes_involved:
             head.addWidget(Pill(human_size(finding.bytes_involved), finding.tone))
         self.add_layout(head)
@@ -53,7 +53,7 @@ class FindingCard(Card):
         from endslate.ui.theme import tone_colours
 
         strong, _soft, _text = tone_colours(palette, self.finding.tone)
-        self.glyph.setStyleSheet(f"background: {strong}; border-radius: 4px;")
+        self.glyph.setStyleSheet(f"background: {strong}; border-radius: 5px;")
 
     def _reveal(self) -> None:
         path = self.finding.primary
@@ -87,7 +87,7 @@ class HealthPage(Page):
         tiles_holder = QWidget()
         tiles = QHBoxLayout(tiles_holder)
         tiles.setContentsMargins(0, 0, 0, 0)
-        tiles.setSpacing(SPACE["sm"])
+        tiles.setSpacing(SPACE["lg"])
         self.tiles: dict[str, StatTile] = {}
         for key, title, tone in (
             (PROBLEM, "Problems", "red"),
@@ -104,7 +104,7 @@ class HealthPage(Page):
         self.list_holder = QWidget()
         self.list_layout = QVBoxLayout(self.list_holder)
         self.list_layout.setContentsMargins(0, 0, 0, 0)
-        self.list_layout.setSpacing(SPACE["md"])
+        self.list_layout.setSpacing(SPACE["xl"])
 
         self.empty = EmptyState(
             "sparkle",
@@ -140,6 +140,8 @@ class HealthPage(Page):
             self.list_layout.addWidget(label(SEVERITY_LABEL[severity], "section"))
             for finding in findings:
                 self.list_layout.addWidget(FindingCard(finding, self))
+        # The stack is as tall as its tallest page; the slack goes below the list.
+        self.list_layout.addStretch(1)
 
         self.header.set_subtitle(
             f"{report.videos_checked:,} videos and {report.episodes_checked:,} episodes checked."

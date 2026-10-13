@@ -38,12 +38,25 @@ def _build(args, quiet: bool = False):
     if not args.offline:
         from endslate.config import load_config
         from endslate.matcher import TmdbMatcher
+        from endslate.matching import Resolver
+        from endslate.tvdb import TvdbMatcher
+
         config = load_config()
+        tmdb = tvdb = None
         if config.tmdb_api_key:
-            matcher = TmdbMatcher(config.tmdb_api_key, language=config.metadata_language,
-                                  fuzzy_threshold=config.fuzzy_threshold).match_all
+            tmdb = TmdbMatcher(config.tmdb_api_key, language=config.metadata_language,
+                               fuzzy_threshold=config.fuzzy_threshold)
         elif not quiet:
-            print("no TMDB key configured, running offline", file=sys.stderr)
+            print("no TMDB key configured, films and shows run offline", file=sys.stderr)
+        if config.tvdb_api_key:
+            tvdb = TvdbMatcher(config.tvdb_api_key, language=config.metadata_language,
+                               fuzzy_threshold=config.fuzzy_threshold, pin=config.tvdb_pin)
+        elif not quiet:
+            print("no TheTVDB key configured, anime numbered from episode one waits for you",
+                  file=sys.stderr)
+        if tmdb is not None or tvdb is not None:
+            # The same answers the window would give, remembered decisions included.
+            matcher = Resolver(tmdb, tvdb=tvdb)
     return build_plan(scanned, preset, options, matcher=matcher)
 
 
@@ -117,9 +130,20 @@ def _undo(args) -> int:
     if not runs:
         print("no runs to undo", file=sys.stderr)
         return 2
-    chosen = next((r for r in runs if r.run_id == args.run_id), None) if args.run_id else runs[0]
-    if chosen is None:
-        print(f"no run called {args.run_id}", file=sys.stderr)
+    if args.run_id:
+        chosen = next((r for r in runs if r.run_id == args.run_id), None)
+        if chosen is None:
+            print(f"no run called {args.run_id}", file=sys.stderr)
+            return 2
+    else:
+        # The newest run that is still standing. Picking the newest outright
+        # replayed an already reverted run, which reported every file missing.
+        chosen = next((r for r in runs if not r.reverted), None)
+        if chosen is None:
+            print("every recorded run has already been undone", file=sys.stderr)
+            return 2
+    if chosen.reverted:
+        print(f"{chosen.run_id} has already been undone", file=sys.stderr)
         return 2
     result = undo_run(chosen.path)
     mark_reverted(chosen.path)

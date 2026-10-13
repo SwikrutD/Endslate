@@ -4,6 +4,7 @@ from __future__ import annotations
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QHBoxLayout, QScrollArea, QSizePolicy, QVBoxLayout, QWidget
 
+from endslate.ui import neu
 from endslate.ui.theme import CONTENT_MAX, SPACE
 
 
@@ -17,6 +18,8 @@ class Page(QWidget):
         outer.setSpacing(0)
 
         holder = QWidget()
+        # The page column is the surface every card and control is moulded from.
+        neu.surface(holder)
         holder.setMaximumWidth(CONTENT_MAX)
         holder.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred if scroll else QSizePolicy.Expanding)
         self.column = QVBoxLayout(holder)

@@ -25,12 +25,13 @@ class Decision:
     title: str
     year: Optional[int] = None
     tmdb_id: Optional[int] = None
+    tvdb_id: Optional[int] = None
     is_tv: bool = False
     source: str = ""
     decided_at: str = field(default_factory=lambda: time.strftime("%Y-%m-%dT%H:%M:%S"))
 
     def to_meta(self) -> dict:
-        return {"title": self.title, "year": self.year, "tmdb_id": self.tmdb_id}
+        return {"title": self.title, "year": self.year, "tmdb_id": self.tmdb_id, "tvdb_id": self.tvdb_id}
 
 
 def title_key(title: str, is_tv: bool = False) -> str:
@@ -92,6 +93,7 @@ class Decisions:
             title=meta.get("title", ""),
             year=meta.get("year"),
             tmdb_id=meta.get("tmdb_id"),
+            tvdb_id=meta.get("tvdb_id"),
             is_tv=bool(item.is_tv),
             source=str(item.video.path),
         )

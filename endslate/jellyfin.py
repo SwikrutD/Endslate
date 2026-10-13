@@ -18,6 +18,8 @@ PORT_TIMEOUT = 1.0
 PROCESS_NAMES = ("jellyfin", "jellyfin.exe", "jellyfin-server", "jellyfin-server.exe")
 ID_KEYS = ("Tmdb", "Imdb", "Tvdb", "TmdbCollection", "Zap2It")
 TOP_LEVEL_TYPES = ("Movie", "Series")
+PAGE_SIZE = 2000
+MAX_PAGES = 500
 STALE_HINT = (
     "Jellyfin failing to drop an item it has lost is usually its own database refusing "
     "the delete. Look in its log for 'UNIQUE constraint failed: UserData'. See the README, "
@@ -211,27 +213,49 @@ class JellyfinClient:
         return users[0].get("Id")
 
     def _items(self) -> list[dict]:
+        """Every movie, show and episode, a page at a time.
+
+        One request capped at 10,000 rows used to stop there, so a library with
+        more episodes than that lost the rest from both counts without a word.
+        """
         params = {
             "recursive": "true",
             "includeItemTypes": "Movie,Series,Episode",
             "fields": "ProviderIds,Path",
             "enableImages": "false",
-            "limit": 10000,
+            "enableTotalRecordCount": "true",
+            "limit": PAGE_SIZE,
         }
-        response = self._request("GET", "/Items", **params)
+        path = "/Items"
+        response = self._request("GET", path, startIndex=0, **params)
         if response.status_code >= 400:
             user_id = self._first_user_id()
             if user_id is None:
                 raise JellyfinError(
                     f"Jellyfin answered HTTP {response.status_code} when asked for its items."
                 )
-            response = self._request("GET", f"/Users/{user_id}/Items", **params)
+            path = f"/Users/{user_id}/Items"
+            response = self._request("GET", path, startIndex=0, **params)
             if response.status_code >= 400:
                 raise JellyfinError(
                     f"Jellyfin answered HTTP {response.status_code} when asked for its items."
                 )
-        payload = response.json()
-        return payload.get("Items", []) if isinstance(payload, dict) else []
+        items: list[dict] = []
+        for _page in range(MAX_PAGES):
+            payload = response.json()
+            if not isinstance(payload, dict):
+                break
+            page = payload.get("Items", []) or []
+            items.extend(page)
+            total = payload.get("TotalRecordCount")
+            if len(page) < PAGE_SIZE or (isinstance(total, int) and len(items) >= total):
+                break
+            response = self._request("GET", path, startIndex=len(items), **params)
+            if response.status_code >= 400:
+                raise JellyfinError(
+                    f"Jellyfin answered HTTP {response.status_code} part way through its items."
+                )
+        return items
 
     def report(self) -> LibraryReport:
         """Which movies and shows Jellyfin could not put a provider id against."""

@@ -10,7 +10,7 @@ from endslate import fsops
 from endslate.journal import Journal, read_records
 from endslate.models import OpKind, Operation, Plan
 from endslate.sanitize import MAX_PATH
-from endslate.scanner import QUARANTINE_DIRNAME
+from endslate.scanner import DOWNLOADS_DIRNAME, QUARANTINE_DIRNAME
 
 Progress = Callable[[str, int, int], None]
 
@@ -224,7 +224,8 @@ def _sweep(root: Path, journal: Journal, result: Result) -> int:
     """Remove folders the run emptied. Only empties, never anything with content."""
     removed = 0
     for here, dirnames, filenames in _bottom_up(root):
-        if here == root or QUARANTINE_DIRNAME in here.parts:
+        if (here == root or QUARANTINE_DIRNAME in here.parts
+                or (here.parent == root and here.name.lower() == DOWNLOADS_DIRNAME.lower())):
             continue
         try:
             if fsops.is_empty_dir(here):

@@ -30,7 +30,7 @@ from endslate.journal import list_runs, mark_reverted
 from endslate.models import Plan
 from endslate.planner import Options
 from endslate.presets import BUILTIN_PRESETS, Preset, build_tokens, render
-from endslate.ui import icons, theme
+from endslate.ui import icons, neu, theme
 from endslate.ui.dialogs import ResolveDialog
 from endslate.ui.pages.apply import ApplyPage
 from endslate.ui.pages.health import HealthPage
@@ -40,7 +40,7 @@ from endslate.ui.pages.review import ReviewPage
 from endslate.ui.pages.settings import SettingsPage
 from endslate.ui.resolver import Resolver
 from endslate.ui.theme import RAIL_WIDTH, SPACE
-from endslate.ui.widgets import Clapstick, Toast, label, restyle_tree
+from endslate.ui.widgets import Orb, Toast, label, restyle_tree
 from endslate.ui.workers import ApplyJob, HealthJob, PlanJob, ProbeJob, ScanJob, UndoJob
 
 NAV = [
@@ -56,36 +56,43 @@ ASSETS = Path(__file__).resolve().parent.parent.parent / "assets"
 
 
 class Rail(QFrame):
-    """The left-hand navigation. Icons plus words, because both help."""
+    """The left-hand navigation. Icons plus words, because both help.
+
+    The rail is the same clay as the page. Each destination is a key that rises
+    under the pointer; the page you are on is the key held down.
+    """
 
     def __init__(self, on_select, parent=None):
         super().__init__(parent)
         self.setObjectName("Rail")
         self.setFixedWidth(RAIL_WIDTH)
+        neu.surface(self)
 
-        outer = QVBoxLayout(self)
-        outer.setContentsMargins(0, 0, 0, 0)
-        outer.setSpacing(0)
-        outer.addWidget(Clapstick())
-        layout = QVBoxLayout()
-        layout.setContentsMargins(0, SPACE["xl"], 0, SPACE["lg"])
-        layout.setSpacing(2)
-        outer.addLayout(layout, 1)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(SPACE["lg"], SPACE["xl"], SPACE["lg"], SPACE["lg"])
+        layout.setSpacing(SPACE["sm"])
 
-        # A wordmark, not a logo: the clapstick above already is the mark.
+        brand_row = QHBoxLayout()
+        brand_row.setSpacing(SPACE["xs"])
+        self.orb = Orb(40)
+        brand_row.addWidget(self.orb, 0, Qt.AlignVCenter)
         brand = QVBoxLayout()
-        brand.setContentsMargins(SPACE["lg"], 0, SPACE["lg"], 0)
         brand.setSpacing(0)
         title = QLabel("Endslate")
         title.setObjectName("RailBrand")
         theme.apply_role_font(title, "title")
-        version = QLabel(f"MEDIA RENAMER  ·  v{__version__}")
-        version.setObjectName("RailTag")
+        tag = QLabel("MEDIA RENAMER")
+        tag.setObjectName("RailTag")
+        tag.setFont(theme.display_font(theme.SIZE_MICRO, 700))
+        version = QLabel(f"v{__version__}")
+        version.setObjectName("RailFoot")
         version.setFont(theme.mono_font(theme.SIZE_MICRO))
         brand.addWidget(title)
+        brand.addWidget(tag)
         brand.addWidget(version)
-        layout.addLayout(brand)
-        layout.addSpacing(SPACE["2xl"])
+        brand_row.addLayout(brand, 1)
+        layout.addLayout(brand_row)
+        layout.addSpacing(SPACE["xl"])
 
         self.buttons: dict[str, QPushButton] = {}
         for index, (title_text, key) in enumerate(NAV):
@@ -96,15 +103,18 @@ class Rail(QFrame):
             # beside the current-page marker.
             item.setFocusPolicy(Qt.TabFocus)
             item.setIconSize(QSize(18, 18))
+            item.setMinimumHeight(46)
             item.setShortcut(QKeySequence(f"Ctrl+{index + 1}"))
             item.setToolTip(f"{title_text}  (Ctrl+{index + 1})")
             item.clicked.connect(lambda _=False, k=key: on_select(k))
+            neu.style(item, "raised", radius=16, depth="xs", interactive=True, hover_flat=True,
+                      focus_ring=True, keyboard_ring=True)
             layout.addWidget(item)
             self.buttons[key] = item
 
         layout.addStretch(1)
         foot = QVBoxLayout()
-        foot.setContentsMargins(SPACE["lg"], 0, SPACE["lg"], 0)
+        foot.setContentsMargins(SPACE["xs"], 0, SPACE["xs"], 0)
         foot.setSpacing(3)
         self.foot_label = QLabel("LIBRARY")
         self.foot_label.setObjectName("RailFootLabel")
@@ -121,7 +131,9 @@ class Rail(QFrame):
 
     def select(self, key: str) -> None:
         for item_key, item in self.buttons.items():
-            item.setProperty("current", "true" if item_key == key else "false")
+            current = item_key == key
+            item.setProperty("current", "true" if current else "false")
+            item.setProperty("neuPressed", current)
             item.style().unpolish(item)
             item.style().polish(item)
         self.restyle()
@@ -140,9 +152,10 @@ class Rail(QFrame):
 
     def restyle(self) -> None:
         palette = theme.active()
+        self.setStyleSheet("#Rail { background: transparent; border: none; }")
         for key, item in self.buttons.items():
             current = item.property("current") == "true"
-            item.setIcon(icons.icon(key, palette.text if current else palette.text_faint, 18))
+            item.setIcon(icons.icon(key, palette.accent if current else palette.text_faint, 18))
 
 
 class MainWindow(QMainWindow):
@@ -153,10 +166,11 @@ class MainWindow(QMainWindow):
         self.plan: Optional[Plan] = None
         self.decisions = Decisions()
         self.job = None
+        self._retired: list = []
         self._undo_info = None
 
         self.setWindowTitle("Endslate")
-        self.setMinimumSize(1060, 720)
+        self.setMinimumSize(1100, 740)
         icon_file = ASSETS / "endslate.ico"
         if icon_file.exists():
             self.setWindowIcon(QIcon(str(icon_file)))
@@ -170,8 +184,10 @@ class MainWindow(QMainWindow):
 
     def _build(self) -> None:
         central = QWidget()
+        central.setObjectName("Window")
+        neu.surface(central)
         outer = QHBoxLayout(central)
-        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setContentsMargins(SPACE["xs"], 0, 0, 0)
         outer.setSpacing(0)
 
         self.rail = Rail(self.go_to)
@@ -255,6 +271,8 @@ class MainWindow(QMainWindow):
         )
 
         self.settings_page.api_key.setText(self.config.tmdb_api_key)
+        self.settings_page.tvdb_key.setText(self.config.tvdb_api_key)
+        self.settings_page.tvdb_pin.setText(self.config.tvdb_pin)
         self.settings_page.metadata_language.setText(self.config.metadata_language)
         self.settings_page.subtitle_language.setText(self.config.subtitle_language)
         self.settings_page.fuzzy.setValue(self.config.fuzzy_threshold)
@@ -272,6 +290,8 @@ class MainWindow(QMainWindow):
 
     def save_settings(self) -> None:
         self.config.tmdb_api_key = self.settings_page.api_key.text().strip()
+        self.config.tvdb_api_key = self.settings_page.tvdb_key.text().strip()
+        self.config.tvdb_pin = self.settings_page.tvdb_pin.text().strip()
         self.config.metadata_language = self.settings_page.metadata_language.text().strip() or "en-US"
         self.config.subtitle_language = self.settings_page.subtitle_language.text().strip() or "en"
         self.config.fuzzy_threshold = self.settings_page.fuzzy.value()
@@ -297,6 +317,7 @@ class MainWindow(QMainWindow):
         theme.apply_theme(QApplication.instance(), theme.resolve_mode(mode))
         self.settings_page.theme_choice.select(mode)
         restyle_tree(self)
+        self.update()
         self.rail.restyle()
         self.toast(f"{mode.capitalize()} theme", "sparkle")
 
@@ -336,6 +357,39 @@ class MainWindow(QMainWindow):
             cache=Cache(cache_path()),
         )
 
+    def tvdb(self):
+        key = self.settings_page.tvdb_key.text().strip() or self.config.tvdb_api_key
+        if not key:
+            return None
+        from endslate.tvdb import TvdbMatcher
+
+        return TvdbMatcher(
+            key,
+            language=self.settings_page.metadata_language.text().strip() or "en-US",
+            fuzzy_threshold=self.settings_page.fuzzy.value(),
+            cache=Cache(cache_path()),
+            pin=self.settings_page.tvdb_pin.text().strip() or self.config.tvdb_pin,
+        )
+
+    def busy(self) -> bool:
+        """A job is still running. F5 and Ctrl+R used to start a second one over it,
+        and Qt aborts when a running thread loses its last reference."""
+        return self.job is not None and self.job.isRunning()
+
+    def _start(self, job, done) -> None:
+        # The job being replaced may still be finishing its run() after its
+        # done signal; hold on to it until the thread has really stopped.
+        previous = self.job
+        if previous is not None and previous.isRunning():
+            self._retired.append(previous)
+            previous.finished.connect(lambda old=previous: self._retired.remove(old)
+                                      if old in self._retired else None)
+        self.job = job
+        job.progress.connect(self._on_progress)
+        job.failed.connect(self._on_failure)
+        job.done.connect(done)
+        job.start()
+
     def _busy(self, on: bool, message: str = "") -> None:
         self.library_page.scan_button.setEnabled(not on)
         self.library_page.scan_button.setText("Scanning..." if on else "Scan library")
@@ -351,6 +405,9 @@ class MainWindow(QMainWindow):
         QMessageBox.critical(self, "Something went wrong", message)
 
     def start_scan(self) -> None:
+        if self.busy():
+            self.toast("Still working on the last job", "info", "amber")
+            return
         path = Path(self.library_page.dropzone.path or "").expanduser()
         if not str(path) or not path.is_dir():
             self.go_to("library")
@@ -359,11 +416,7 @@ class MainWindow(QMainWindow):
         self._save_library_choices()
         self.config.save()
         self._busy(True, "scanning")
-        self.job = ScanJob(path)
-        self.job.progress.connect(self._on_progress)
-        self.job.failed.connect(self._on_failure)
-        self.job.done.connect(self._scan_done)
-        self.job.start()
+        self._start(ScanJob(path), self._scan_done)
 
     def _scan_done(self, scan_result) -> None:
         self.scan_result = scan_result
@@ -378,15 +431,16 @@ class MainWindow(QMainWindow):
     def start_plan(self) -> None:
         if self.scan_result is None:
             return
+        if self.busy() and not isinstance(self.job, ScanJob):
+            self.toast("Still working on the last job", "info", "amber")
+            return
         self._busy(True, "planning")
         self._last_matcher = self.tmdb()
-        resolver = Resolver(self._last_matcher, self.decisions)
+        self._last_tvdb = self.tvdb()
+        resolver = Resolver(self._last_matcher, self.decisions, tvdb=self._last_tvdb)
         self._last_resolver = resolver
-        self.job = PlanJob(self.scan_result, self.current_preset(), self._options(), matcher=resolver)
-        self.job.progress.connect(self._on_progress)
-        self.job.failed.connect(self._on_failure)
-        self.job.done.connect(self._plan_done)
-        self.job.start()
+        self._start(PlanJob(self.scan_result, self.current_preset(), self._options(), matcher=resolver),
+                    self._plan_done)
 
     def _plan_done(self, plan: Plan) -> None:
         previous = {}
@@ -408,6 +462,13 @@ class MainWindow(QMainWindow):
                 f"TMDB could not be reached ({matcher.offline_reason}). Titles and years came "
                 "from the filenames only, so anything without a year is waiting in Needs you."
             )
+        anime_matcher = getattr(self, "_last_tvdb", None)
+        if anime_matcher is not None and getattr(anime_matcher, "unreachable", False):
+            note = (
+                f"TheTVDB could not be reached ({anime_matcher.offline_reason}). Anime numbered "
+                "from episode one is waiting in Needs you."
+            )
+            plan.provider_note = f"{plan.provider_note}   {note}".strip()
         self.plan = plan
         self.review_page.set_plan(plan)
         self.apply_page.set_plan(plan, self._jellyfin_message())
@@ -417,7 +478,7 @@ class MainWindow(QMainWindow):
     def plan_selection_changed(self) -> None:
         if self.plan is None:
             return
-        total = len(self.plan.selected_operations())
+        total = self.plan.change_count()
         self.review_page.apply_button.setEnabled(total > 0)
         self.review_page.apply_button.setText(f"Apply {total:,} changes" if total else "Apply")
         self.apply_page.set_plan(self.plan, self._jellyfin_message())
@@ -461,7 +522,9 @@ class MainWindow(QMainWindow):
         if entry.item is None:
             self.toast("That row is a file operation, not a title", "info", "amber")
             return
-        dialog = ResolveDialog(entry.item, matcher=self.tmdb(), parent=self)
+        anime = entry.item.is_tv and entry.item.is_anime
+        matcher = (self.tvdb() or self.tmdb()) if anime else self.tmdb()
+        dialog = ResolveDialog(entry.item, matcher=matcher, parent=self)
         if dialog.exec() != ResolveDialog.Accepted or dialog.result_meta is None:
             return
         self.decisions.remember(entry.item, dialog.result_meta)
@@ -485,7 +548,7 @@ class MainWindow(QMainWindow):
         )
 
     def start_apply(self) -> None:
-        if self.plan is None:
+        if self.plan is None or self.busy():
             return
         operations = self.plan.selected_operations()
         if not operations:
@@ -515,15 +578,16 @@ class MainWindow(QMainWindow):
         self._busy(True, "applying")
         self.apply_page.set_busy(True, "Applying")
         run_id = _dt.datetime.now().strftime("%Y-%m-%d_%H%M%S")
-        self.job = ApplyJob(self.plan, run_id)
-        self.job.progress.connect(self._on_progress)
-        self.job.failed.connect(self._on_failure)
-        self.job.done.connect(self._apply_done)
-        self.job.start()
+        self._start(ApplyJob(self.plan, run_id), self._apply_done)
 
     def _apply_done(self, result) -> None:
         self._busy(False, "")
         self.apply_page.show_result(result)
+        if result.journal_path is None and result.failures:
+            # Preflight refused before anything moved. The plan is still true,
+            # so it stays: clearing it threw away the review for nothing.
+            self.toast(f"Nothing moved: {len(result.failures)} problem(s) found first", "warning", "red")
+            return
         if self.config.jellyfin_refresh_after_apply and self.config.jellyfin_api_key and result.moved:
             self.jellyfin_refresh(quiet=True)
         self.scan_result = None
@@ -541,12 +605,11 @@ class MainWindow(QMainWindow):
             self.go_to("library")
             self.toast("Scan a library first", "info", "amber")
             return
+        if self.busy():
+            self.toast("Still working on the last job", "info", "amber")
+            return
         self._busy(True, "checking the library")
-        self.job = HealthJob(self.scan_result)
-        self.job.progress.connect(self._on_progress)
-        self.job.failed.connect(self._on_failure)
-        self.job.done.connect(self._health_done)
-        self.job.start()
+        self._start(HealthJob(self.scan_result), self._health_done)
 
     def _health_done(self, report) -> None:
         self._busy(False, "")
@@ -565,12 +628,11 @@ class MainWindow(QMainWindow):
         if not paths:
             self.toast("Run the check first, then this probes whatever looks broken", "info", "amber")
             return
+        if self.busy():
+            self.toast("Still working on the last job", "info", "amber")
+            return
         self._busy(True, "probing files")
-        self.job = ProbeJob(paths)
-        self.job.progress.connect(self._on_progress)
-        self.job.failed.connect(self._on_failure)
-        self.job.done.connect(self._probe_done)
-        self.job.start()
+        self._start(ProbeJob(paths), self._probe_done)
 
     def _probe_done(self, findings) -> None:
         self._busy(False, "")
@@ -645,6 +707,9 @@ class MainWindow(QMainWindow):
         self.history_page.set_runs(self.runs, self.start_undo)
 
     def start_undo(self, info) -> None:
+        if self.busy():
+            self.toast("Still working on the last job", "info", "amber")
+            return
         answer = QMessageBox.question(
             self,
             "Undo",
@@ -657,11 +722,7 @@ class MainWindow(QMainWindow):
             return
         self._busy(True, "undoing")
         self._undo_info = info
-        self.job = UndoJob(info.path)
-        self.job.progress.connect(self._on_progress)
-        self.job.failed.connect(self._on_failure)
-        self.job.done.connect(self._undo_done)
-        self.job.start()
+        self._start(UndoJob(info.path), self._undo_done)
 
     def _undo_done(self, result) -> None:
         self._busy(False, "")
@@ -701,6 +762,29 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(
                 self,
                 "TMDB",
+                f"No results came back. {matcher.offline_reason or 'Check the key and the network.'}",
+            )
+
+    def test_tvdb_key(self) -> None:
+        from endslate.tvdb import TvdbError, TvdbMatcher
+
+        key = self.settings_page.tvdb_key.text().strip()
+        if not key:
+            self.toast("Paste your TheTVDB key first", "key", "amber")
+            return
+        try:
+            matcher = TvdbMatcher(key, cache=Cache(cache_path()),
+                                  pin=self.settings_page.tvdb_pin.text().strip())
+            results = matcher.search_show("Sousou no Frieren", 2023)
+        except TvdbError as exc:
+            QMessageBox.critical(self, "TheTVDB", str(exc))
+            return
+        if results:
+            self.toast(f"Key works, found {results[0].label}", "check")
+        else:
+            QMessageBox.warning(
+                self,
+                "TheTVDB",
                 f"No results came back. {matcher.offline_reason or 'Check the key and the network.'}",
             )
 
@@ -748,6 +832,8 @@ class MainWindow(QMainWindow):
         movie = build_tokens(title="Fight Club", year=1999)
         bare = build_tokens(title="Rush Hour")
         episode = build_tokens(title="The 100", year=2014, season=1, episode=4, episode_title="Murphy's Law")
+        anime = build_tokens(title="Frieren - Beyond Journey's End", year=2023, season=1, episode=12,
+                             episode_title="A Real Hero", tvdb_id=424536, absolute=12)
         folder = f"{render(preset.movie_folder, movie)}\\" if preset.folder_per_movie else ""
         self.settings_page.set_preview(
             [
@@ -757,6 +843,8 @@ class MainWindow(QMainWindow):
                 else f"{preset.movies_dir}\\{render(preset.movie_file, bare)}.mkv",
                 f"{preset.shows_dir}\\{render(preset.movie_folder, episode)}\\"
                 f"{render(preset.season_folder, episode)}\\{render(preset.episode_file, episode)}.mkv",
+                f"{preset.anime_dir}\\{render(preset.anime_folder, anime)}\\"
+                f"{render(preset.season_folder, anime)}\\{render(preset.episode_file, anime)}.mkv",
             ]
         )
 
@@ -852,6 +940,7 @@ def run_app() -> int:
     if icon_file.exists():
         app.setWindowIcon(QIcon(str(icon_file)))
     _install_crash_handler()
+    theme.load_fonts()
     try:
         window = MainWindow()
     except Exception as exc:
