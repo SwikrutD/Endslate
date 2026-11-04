@@ -287,8 +287,27 @@ class MainWindow(QMainWindow):
         self.refresh_decision_count()
         self.preview_templates()
         restyle_tree(self)
+        page = self.settings_page
+        for field in (page.api_key, page.tvdb_key, page.tvdb_pin, page.jellyfin_url, page.jellyfin_key):
+            field.editingFinished.connect(self.autosave_settings)
 
     def save_settings(self) -> None:
+        self._read_settings()
+        self._save_library_choices()
+        self.config.save()
+        self.toast("Settings saved")
+
+    def autosave_settings(self) -> None:
+        """Keys and the server address persist as soon as they are typed. They used to
+        wait for Save settings, so a key pasted and tested, then the window closed, was
+        gone on the next start."""
+        self._read_settings()
+        try:
+            self.config.save()
+        except OSError:
+            pass
+
+    def _read_settings(self) -> None:
         self.config.tmdb_api_key = self.settings_page.api_key.text().strip()
         self.config.tvdb_api_key = self.settings_page.tvdb_key.text().strip()
         self.config.tvdb_pin = self.settings_page.tvdb_pin.text().strip()
@@ -299,9 +318,6 @@ class MainWindow(QMainWindow):
         self.config.jellyfin_url = self.settings_page.jellyfin_url.text().strip() or "http://localhost:8096"
         self.config.jellyfin_api_key = self.settings_page.jellyfin_key.text().strip()
         self.config.jellyfin_refresh_after_apply = self.settings_page.refresh_after_apply.isChecked()
-        self._save_library_choices()
-        self.config.save()
-        self.toast("Settings saved")
 
     def _save_library_choices(self) -> None:
         self.config.preset = self.library_page.current_preset_name()
@@ -887,6 +903,7 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event):  # noqa: N802
         try:
             self.config.window_geometry = base64.b64encode(bytes(self.saveGeometry())).decode("ascii")
+            self._read_settings()
             self._save_library_choices()
             self.config.save()
         except Exception:

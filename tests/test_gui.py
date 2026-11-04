@@ -230,6 +230,27 @@ def test_the_tvdb_key_is_saved_with_the_settings(window, qapp):
     assert window.tvdb() is not None
 
 
+def test_keys_survive_a_restart_without_save_settings(window, qapp):
+    # The TheTVDB and Jellyfin keys were only written by Save settings: typed,
+    # tested and the window closed, they were empty on the next start.
+    window.settings_page.tvdb_key.setText("a-tvdb-key")
+    window.settings_page.jellyfin_key.setText("a-jellyfin-key")
+    window.close()
+    from endslate.config import load_config
+
+    config = load_config()
+    assert config.tvdb_api_key == "a-tvdb-key"
+    assert config.jellyfin_api_key == "a-jellyfin-key"
+
+
+def test_a_key_is_saved_when_its_field_loses_focus(window, qapp):
+    window.settings_page.jellyfin_key.setText("typed-key")
+    window.settings_page.jellyfin_key.editingFinished.emit()
+    from endslate.config import load_config
+
+    assert load_config().jellyfin_api_key == "typed-key"
+
+
 def test_a_refused_apply_keeps_the_plan(window, qapp, library):
     """Preflight refused, nothing moved, and the review was thrown away anyway."""
     from endslate.executor import Problem, Result
